@@ -22,59 +22,69 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Register Javascript Interface so web app can communicate with Android native service
-        if (this.bridge != null && this.bridge.getWebView() != null) {
-            this.bridge.getWebView().addJavascriptInterface(new AndroidPetBridge(), "AndroidPetBridge");
+        try {
+            if (this.bridge != null && this.bridge.getWebView() != null) {
+                this.bridge.getWebView().addJavascriptInterface(new AndroidPetBridge(), "AndroidPetBridge");
+            }
+            checkAndRequestPermissions();
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
-
-        checkAndRequestPermissions();
     }
 
     private void checkAndRequestPermissions() {
-        // Request Notification permission on Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_REQ_CODE);
+        try {
+            // Request Notification permission on Android 13+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_REQ_CODE);
+                }
             }
-        }
 
-        // Request Overlay permission
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!Settings.canDrawOverlays(this)) {
-                Intent intent = new Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + getPackageName())
-                );
-                startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE);
+            // Request Overlay permission
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (!Settings.canDrawOverlays(this)) {
+                    Intent intent = new Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:" + getPackageName())
+                    );
+                    startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE);
+                }
             }
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == OVERLAY_PERMISSION_REQ_CODE) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                startFloatingPetService();
+        try {
+            if (requestCode == OVERLAY_PERMISSION_REQ_CODE) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                    startFloatingPetService();
+                }
             }
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
     }
 
     public void startFloatingPetService() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            checkAndRequestPermissions();
-            return;
-        }
-
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                checkAndRequestPermissions();
+                return;
+            }
+
             Intent serviceIntent = new Intent(this, FloatingPetService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent);
             } else {
                 startService(serviceIntent);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
     }
 
@@ -82,41 +92,47 @@ public class MainActivity extends BridgeActivity {
         try {
             Intent serviceIntent = new Intent(this, FloatingPetService.class);
             stopService(serviceIntent);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // Stop overlay while user is actively inside main activity
-        stopFloatingPetService();
+        try {
+            stopFloatingPetService();
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        // Start floating overlay pet when user leaves or minimizes the app
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-            startFloatingPetService();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                startFloatingPetService();
+            }
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
     }
 
     @Override
     public void onUserLeaveHint() {
         super.onUserLeaveHint();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-            startFloatingPetService();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                startFloatingPetService();
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
                 Rational aspectRatio = new Rational(1, 1);
                 pipBuilder.setAspectRatio(aspectRatio);
                 enterPictureInPictureMode(pipBuilder.build());
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
     }
 
@@ -133,9 +149,11 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public boolean isOverlayGranted() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                return Settings.canDrawOverlays(MainActivity.this);
-            }
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    return Settings.canDrawOverlays(MainActivity.this);
+                }
+            } catch (Throwable t) {}
             return true;
         }
 
