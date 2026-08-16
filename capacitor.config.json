@@ -1,0 +1,16 @@
+{
+  "appId": "com.myphonefriend.app",
+  "appName": "내 폰 안의 친구",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "",
+      "releaseType": "AAB"
+    },
+    "allowMixedContent": true
+  }
+}
