@@ -486,7 +486,19 @@ body.mode-overlay #global-character-layer {
   height: 100vh;
   background: transparent !important;
   pointer-events: none;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   z-index: 999999;
+}
+
+body.mode-overlay .character-container {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: scale(0.92) !important;
+  margin: auto !important;
+  pointer-events: none !important;
 }
 
 /* ==========================================================================

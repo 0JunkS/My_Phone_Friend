@@ -699,6 +699,15 @@ export class CharacterController {
    * Keeps speech bubble upright without being mirrored!
    */
   updateTransform() {
+    if (document.body.classList.contains('mode-overlay')) {
+      this.el.style.left = '15px';
+      this.el.style.top = '25px';
+      const facingScale = this.facingRight ? 1 : -1;
+      this.bodyWrapper.style.setProperty('--char-facing', facingScale);
+      this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
+      return;
+    }
+
     this.el.style.left = `${this.x}px`;
     this.el.style.top = `${this.y}px`;
     const facingScale = this.facingRight ? 1 : -1;
