@@ -14,6 +14,8 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -127,7 +129,7 @@ public class FloatingPetService extends Service {
                 layoutType = WindowManager.LayoutParams.TYPE_PHONE;
             }
 
-            // Full screen transparent overlay window so character roaming, speech bubbles & character selection modals fit seamlessly
+            // Full screen transparent overlay window
             params = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
@@ -143,22 +145,30 @@ public class FloatingPetService extends Service {
             floatingLayout = new FrameLayout(this);
             floatingLayout.setBackgroundColor(Color.TRANSPARENT);
 
-            // Transparent WebView rendering identical SVG Character & Modals
+            // Transparent WebView rendering local APK asset bundle offline
             webView = new WebView(this);
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setAllowFileAccess(true);
             settings.setAllowContentAccess(true);
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowUniversalAccessFromFileURLs(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setDatabaseEnabled(true);
 
             webView.setBackgroundColor(Color.TRANSPARENT);
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            webView.setWebViewClient(new WebViewClient());
 
-            // Load local web application bundle with mode=overlay query
-            webView.loadUrl("https://localhost/index.html?mode=overlay");
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                    super.onReceivedError(view, request, error);
+                }
+            });
+
+            // Load local android asset bundle offline
+            webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
 
             floatingLayout.addView(webView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
