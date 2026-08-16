@@ -498,7 +498,7 @@ export class CharacterController {
     };
 
     const handleStart = (e) => {
-      if (isTracking) return;
+      if (e.cancelable) e.preventDefault();
       isTracking = true;
       this.isDragging = true;
       this.hasTriggeredLongPress = false;
@@ -534,6 +534,7 @@ export class CharacterController {
 
     const handleMove = (e) => {
       if (!isTracking || !this.isDragging) return;
+      if (e.cancelable) e.preventDefault();
       const coords = getCoords(e);
 
       const dx = coords.x - this.lastPointerX;
@@ -574,7 +575,7 @@ export class CharacterController {
       }
 
       if (!this.hasTriggeredLongPress) {
-        if (this.dragDistance < 15) {
+        if (this.dragDistance < 18) {
           // Clean Tap event -> Register multi-tap
           const now = Date.now();
           this.tapTimestamps.push(now);
@@ -607,21 +608,17 @@ export class CharacterController {
       }
     };
 
-    // Attach Unified Pointer or Touch Events
-    if (window.PointerEvent) {
-      this.el.addEventListener('pointerdown', handleStart);
-      window.addEventListener('pointermove', handleMove, { passive: false });
-      window.addEventListener('pointerup', handleEnd);
-      window.addEventListener('pointercancel', handleEnd);
-    } else {
-      this.el.addEventListener('touchstart', handleStart, { passive: true });
-      window.addEventListener('touchmove', handleMove, { passive: true });
-      window.addEventListener('touchend', handleEnd, { passive: true });
-      window.addEventListener('touchcancel', handleEnd, { passive: true });
-      this.el.addEventListener('mousedown', handleStart);
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-    }
+    // Pointer events
+    this.el.addEventListener('pointerdown', handleStart, { passive: false });
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    window.addEventListener('pointerup', handleEnd, { passive: false });
+    window.addEventListener('pointercancel', handleEnd, { passive: false });
+
+    // Touch fallback listeners
+    this.el.addEventListener('touchstart', handleStart, { passive: false });
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd, { passive: false });
+    window.addEventListener('touchcancel', handleEnd, { passive: false });
   }
 
   getViewportSize() {

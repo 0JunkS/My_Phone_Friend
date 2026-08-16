@@ -21,8 +21,8 @@ class App {
   }
 
   init() {
-    // 1. Initialize Character with Triple-Tap AI Listener on Persistent Global Layer
-    const container = document.getElementById('global-character-layer') || document.body;
+    // 1. Initialize Character directly on document.body for 100% reliable mobile touch hit testing
+    const container = document.body;
     this.character = new CharacterController(container, {
       type: CHARACTER_TYPES.NANO_BANANA,
       onLongPress: (x, y) => this.showRadialMenu(x, y),

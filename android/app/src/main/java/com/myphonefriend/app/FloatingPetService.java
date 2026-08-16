@@ -1,5 +1,7 @@
 package com.myphonefriend.app;
 
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -10,20 +12,26 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 public class FloatingPetService extends Service {
 
     private WindowManager windowManager;
     private FrameLayout floatingLayout;
     private WindowManager.LayoutParams params;
+    private TextView petView;
+    private TextView speechView;
+    private Handler wanderHandler;
+    private Runnable wanderRunnable;
+
     private static final String CHANNEL_ID = "FloatingPetChannel";
     private static final int NOTIFICATION_ID = 1001;
 
@@ -36,7 +44,7 @@ public class FloatingPetService extends Service {
     public void onCreate() {
         super.onCreate();
         startForegroundServiceWithNotification();
-        createFloatingPetView();
+        createNativeFloatingPet();
     }
 
     private void startForegroundServiceWithNotification() {
@@ -77,7 +85,7 @@ public class FloatingPetService extends Service {
         startForeground(NOTIFICATION_ID, notification);
     }
 
-    private void createFloatingPetView() {
+    private void createNativeFloatingPet() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         int layoutType;
@@ -88,8 +96,8 @@ public class FloatingPetService extends Service {
         }
 
         params = new WindowManager.LayoutParams(
+                dpToPx(120),
                 dpToPx(130),
-                dpToPx(140),
                 layoutType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -97,31 +105,52 @@ public class FloatingPetService extends Service {
         );
 
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = dpToPx(50);
-        params.y = dpToPx(150);
+        params.x = dpToPx(60);
+        params.y = dpToPx(180);
 
         floatingLayout = new FrameLayout(this);
         floatingLayout.setBackgroundColor(Color.TRANSPARENT);
 
-        WebView webView = new WebView(this);
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        webView.setBackgroundColor(Color.TRANSPARENT);
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // Speech Bubble View
+        speechView = new TextView(this);
+        speechView.setText("안녕! 🍌");
+        speechView.setTextColor(Color.parseColor("#0f172a"));
+        speechView.setTextSize(11);
+        speechView.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+        speechView.setBackgroundColor(Color.parseColor("#EEFFFFFF"));
+        speechView.setGravity(Gravity.CENTER);
+        speechView.setVisibility(View.GONE);
 
-        // Load local character view
-        webView.loadUrl("https://localhost/index.html");
+        FrameLayout.LayoutParams speechParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        speechParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        floatingLayout.addView(speechView, speechParams);
 
-        floatingLayout.addView(webView);
+        // Cute Mascot Emoji / Character View
+        petView = new TextView(this);
+        petView.setText("🍌");
+        petView.setTextSize(52);
+        petView.setGravity(Gravity.CENTER);
 
-        // Touch & Drag across Android screen
+        FrameLayout.LayoutParams petParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        petParams.gravity = Gravity.CENTER;
+        floatingLayout.addView(petView, petParams);
+
+        // Idle Bobbing Animation
+        startBobbingAnimation();
+
+        // Touch, Drag & Tap Listeners on Android Screen
         floatingLayout.setOnTouchListener(new View.OnTouchListener() {
             private int initialX, initialY;
             private float initialTouchX, initialTouchY;
             private long touchStartTime;
+            private int tapCount = 0;
+            private long lastTapTime = 0;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -132,6 +161,8 @@ public class FloatingPetService extends Service {
                         initialY = params.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
+                        petView.setScaleX(1.15f);
+                        petView.setScaleY(1.15f);
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
@@ -143,15 +174,31 @@ public class FloatingPetService extends Service {
                         return true;
 
                     case MotionEvent.ACTION_UP:
+                        petView.setScaleX(1.0f);
+                        petView.setScaleY(1.0f);
+
                         long duration = System.currentTimeMillis() - touchStartTime;
                         float diffX = Math.abs(event.getRawX() - initialTouchX);
                         float diffY = Math.abs(event.getRawY() - initialTouchY);
 
-                        if (duration < 300 && diffX < 15 && diffY < 15) {
-                            // Tap -> Open MainActivity
-                            Intent launchIntent = new Intent(FloatingPetService.this, MainActivity.class);
-                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            startActivity(launchIntent);
+                        if (duration < 350 && diffX < 15 && diffY < 15) {
+                            long now = System.currentTimeMillis();
+                            if (now - lastTapTime < 500) {
+                                tapCount++;
+                            } else {
+                                tapCount = 1;
+                            }
+                            lastTapTime = now;
+
+                            if (tapCount >= 2) {
+                                // Double tap or triple tap -> Open App
+                                Intent launchIntent = new Intent(FloatingPetService.this, MainActivity.class);
+                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                startActivity(launchIntent);
+                                tapCount = 0;
+                            } else {
+                                showSpeechBubble("반가워요! 🍌✨", 2500);
+                            }
                         }
                         return true;
                 }
@@ -164,6 +211,49 @@ public class FloatingPetService extends Service {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        startAutonomousWander();
+    }
+
+    private void startBobbingAnimation() {
+        ObjectAnimator bobAnimator = ObjectAnimator.ofPropertyValuesHolder(
+                petView,
+                PropertyValuesHolder.ofFloat("translationY", 0f, -12f, 0f),
+                PropertyValuesHolder.ofFloat("rotation", -3f, 3f, -3f)
+        );
+        bobAnimator.setDuration(1200);
+        bobAnimator.setRepeatCount(ObjectAnimator.INFINITE);
+        bobAnimator.setRepeatMode(ObjectAnimator.RESTART);
+        bobAnimator.start();
+    }
+
+    private void startAutonomousWander() {
+        wanderHandler = new Handler(Looper.getMainLooper());
+        wanderRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (floatingLayout != null && params != null) {
+                    int deltaX = (int) ((Math.random() - 0.5) * 40);
+                    int deltaY = (int) ((Math.random() - 0.5) * 30);
+                    params.x = Math.max(10, Math.min(params.x + deltaX, 800));
+                    params.y = Math.max(50, Math.min(params.y + deltaY, 1500));
+                    try {
+                        windowManager.updateViewLayout(floatingLayout, params);
+                    } catch (Exception e) {}
+                }
+                wanderHandler.postDelayed(this, 3000);
+            }
+        };
+        wanderHandler.postDelayed(wanderRunnable, 3000);
+    }
+
+    private void showSpeechBubble(String text, int durationMs) {
+        if (speechView == null) return;
+        speechView.setText(text);
+        speechView.setVisibility(View.VISIBLE);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (speechView != null) speechView.setVisibility(View.GONE);
+        }, durationMs);
     }
 
     private int dpToPx(int dp) {
@@ -173,6 +263,9 @@ public class FloatingPetService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (wanderHandler != null && wanderRunnable != null) {
+            wanderHandler.removeCallbacks(wanderRunnable);
+        }
         if (floatingLayout != null && windowManager != null) {
             try {
                 windowManager.removeView(floatingLayout);
