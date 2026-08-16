@@ -453,20 +453,40 @@ html, body {
 body.mode-overlay {
   background: transparent !important;
   background-color: transparent !important;
-  overflow: hidden;
+  overflow: hidden !important;
+}
+
+body.mode-overlay > *:not(#global-character-layer) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 body.mode-overlay #home-view,
 body.mode-overlay #companion-view,
 body.mode-overlay .ambient-background,
-body.mode-overlay .glow-orb {
+body.mode-overlay .glow-orb,
+body.mode-overlay .modal,
+body.mode-overlay .modal-backdrop,
+body.mode-overlay #radial-menu,
+body.mode-overlay header,
+body.mode-overlay footer,
+body.mode-overlay button {
   display: none !important;
   opacity: 0 !important;
+  visibility: hidden !important;
   pointer-events: none !important;
 }
 
 body.mode-overlay #global-character-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   background: transparent !important;
+  pointer-events: none;
+  z-index: 999999;
 }
 
 /* ==========================================================================
