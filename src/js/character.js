@@ -604,20 +604,20 @@ export class CharacterController {
 
     if (this.x < 0) {
       this.x = 0;
-      this.vx = Math.abs(this.vx) * 0.6;
+      this.vx = Math.abs(this.vx) * 0.8;
       this.facingRight = true;
     } else if (this.x > maxX) {
       this.x = maxX;
-      this.vx = -Math.abs(this.vx) * 0.6;
+      this.vx = -Math.abs(this.vx) * 0.8;
       this.facingRight = false;
     }
 
     if (this.y < 10) {
       this.y = 10;
-      this.vy = 0;
+      this.vy = Math.abs(this.vy) * 0.8;
     } else if (this.y > maxY) {
       this.y = maxY;
-      this.vy = 0;
+      this.vy = -Math.abs(this.vy) * 0.8;
     }
   }
 
@@ -631,28 +631,22 @@ export class CharacterController {
 
       if (!this.isDragging) {
         wanderTimer += dt;
-        if (wanderTimer > 2.5) {
+        if (wanderTimer > 2.2) {
           wanderTimer = 0;
-          if (Math.random() < 0.35) {
-            this.vx = (Math.random() - 0.5) * (this.state === CHARACTER_STATES.SAD ? 0.9 : 2.4);
+          if (Math.random() < 0.4) {
+            // Random free 2D roaming in X and Y (no ground locking)
+            const speed = this.state === CHARACTER_STATES.SAD ? 0.8 : 1.8;
+            this.vx = (Math.random() - 0.5) * speed * 2;
+            this.vy = (Math.random() - 0.5) * speed * 1.5;
             this.facingRight = this.vx >= 0;
           }
-          if (Math.random() < 0.15 && this.state === CHARACTER_STATES.WALK) {
-            this.vy = -3;
-          }
         }
 
+        // Apply velocity with smooth air friction
         this.x += this.vx * 60 * dt;
         this.y += this.vy * 60 * dt;
-
-        const { height: vpHeight } = this.getViewportSize();
-        const floorY = Math.max(10, vpHeight - this.height - 15);
-        if (this.y < floorY) {
-          this.vy += 9.8 * dt * 0.8;
-        } else {
-          this.y = floorY;
-          this.vy = 0;
-        }
+        this.vx *= 0.99;
+        this.vy *= 0.99;
 
         this.constrainBounds();
         this.updateTransform();

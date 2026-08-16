@@ -43,14 +43,15 @@ jobs:
         run: |
           if [ ! -f "android/gradlew" ]; then
             echo "Generating complete Android project structure..."
-            if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            if [ -d "android/app/src/main" ]; then
               mkdir -p /tmp/android_backup
-              cp android/app/src/main/AndroidManifest.xml /tmp/android_backup/AndroidManifest.xml
+              cp -r android/app/src/main/* /tmp/android_backup/
             fi
             rm -rf android
             npx cap add android
-            if [ -f "/tmp/android_backup/AndroidManifest.xml" ]; then
-              cp /tmp/android_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+            if [ -d "/tmp/android_backup" ]; then
+              mkdir -p android/app/src/main/java/com/myphonefriend/app
+              cp -r /tmp/android_backup/* android/app/src/main/
             fi
           fi
           npx cap sync android
