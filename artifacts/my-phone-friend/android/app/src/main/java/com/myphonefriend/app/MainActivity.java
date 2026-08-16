@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.PictureInPictureParams;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,12 +17,18 @@ public class MainActivity extends BridgeActivity {
 
     private static final int OVERLAY_PERMISSION_REQ_CODE = 1234;
     private static final int NOTIF_PERMISSION_REQ_CODE = 5678;
+    private boolean pausedForBackground = false;
+    private boolean permissionFlowActive = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         try {
+            // The overlay WebView is full-screen so it can receive pet
+            // gestures. Remove an old instance before showing the main app;
+            // otherwise it would sit above the app and consume its touches.
+            stopFloatingPetService();
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().addJavascriptInterface(new AndroidPetBridge(), "AndroidPetBridge");
             }
@@ -36,6 +43,7 @@ public class MainActivity extends BridgeActivity {
             // Request Notification permission on Android 13+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    permissionFlowActive = true;
                     requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_REQ_CODE);
                 }
             }
@@ -43,6 +51,7 @@ public class MainActivity extends BridgeActivity {
             // Request Overlay permission
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (!Settings.canDrawOverlays(this)) {
+                    permissionFlowActive = true;
                     Intent intent = new Intent(
                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                             Uri.parse("package:" + getPackageName())
@@ -60,6 +69,8 @@ public class MainActivity extends BridgeActivity {
         super.onActivityResult(requestCode, resultCode, data);
         try {
             if (requestCode == OVERLAY_PERMISSION_REQ_CODE) {
+                permissionFlowActive = false;
+                pausedForBackground = false;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
                     startFloatingPetService();
                 }
@@ -71,6 +82,20 @@ public class MainActivity extends BridgeActivity {
 
     public void startFloatingPetService() {
         try {
+            getPreferences(MODE_PRIVATE).edit()
+                    .putBoolean("overlay_enabled", true)
+                    .apply();
+            startFloatingPetServiceInBackground();
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
+    }
+
+    private void startFloatingPetServiceInBackground() {
+        try {
+            if (!getPreferences(MODE_PRIVATE).getBoolean("overlay_enabled", true)) {
+                return;
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 checkAndRequestPermissions();
                 return;
@@ -100,7 +125,13 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         try {
-            stopFloatingPetService();
+            // Do not stop the service during initial launch or while returning
+            // from an Android permission screen. Only remove the overlay when
+            // the user actually brings the app back from the background.
+            if (pausedForBackground && !permissionFlowActive) {
+                stopFloatingPetService();
+                pausedForBackground = false;
+            }
         } catch (Throwable t) {
             t.printStackTrace();
         }
@@ -110,8 +141,9 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         try {
+            pausedForBackground = true;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                startFloatingPetService();
+                startFloatingPetServiceInBackground();
             }
         } catch (Throwable t) {
             t.printStackTrace();
@@ -138,21 +170,16 @@ public class MainActivity extends BridgeActivity {
     public class AndroidPetBridge {
         @JavascriptInterface
         public void startOverlay() {
-            MainActivity.this.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    startFloatingPetService();
-                }
-            });
+            runOnUiThread(() -> startFloatingPetService());
         }
 
         @JavascriptInterface
         public void stopOverlay() {
-            MainActivity.this.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    stopFloatingPetService();
-                }
+            runOnUiThread(() -> {
+                getPreferences(MODE_PRIVATE).edit()
+                        .putBoolean("overlay_enabled", false)
+                        .apply();
+                stopFloatingPetService();
             });
         }
 
@@ -168,12 +195,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void requestPermission() {
-            MainActivity.this.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    checkAndRequestPermissions();
-                }
-            });
+            runOnUiThread(() -> checkAndRequestPermissions());
         }
     }
 }

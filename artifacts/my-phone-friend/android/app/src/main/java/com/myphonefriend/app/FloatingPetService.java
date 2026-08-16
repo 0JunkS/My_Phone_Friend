@@ -10,10 +10,14 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -26,6 +30,7 @@ public class FloatingPetService extends Service {
     private WindowManager.LayoutParams params;
     private WebView webView;
     private boolean isViewAttached = false;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private static final String CHANNEL_ID = "FloatingPetChannel";
     private static final int NOTIFICATION_ID = 1001;
@@ -104,6 +109,27 @@ public class FloatingPetService extends Service {
         return START_STICKY;
     }
 
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        // Swiping the host activity away should not silently remove the
+        // foreground companion. Android may recreate a START_STICKY service,
+        // but scheduling one explicit retry makes the behavior deterministic
+        // on devices that aggressively detach services from the task.
+        Intent restartIntent = new Intent(getApplicationContext(), FloatingPetService.class);
+        mainHandler.postDelayed(() -> {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(restartIntent);
+                } else {
+                    startService(restartIntent);
+                }
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }, 1000L);
+        super.onTaskRemoved(rootIntent);
+    }
+
     private void createWebOverlayFloatingPet() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(this)) {
@@ -157,7 +183,13 @@ public class FloatingPetService extends Service {
 
             webView.setBackgroundColor(Color.TRANSPARENT);
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            webView.setWebViewClient(new WebViewClient());
+
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                    super.onReceivedError(view, request, error);
+                }
+            });
 
             // Load local android asset bundle offline
             webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
@@ -180,8 +212,13 @@ public class FloatingPetService extends Service {
     public void onDestroy() {
         super.onDestroy();
         try {
+            mainHandler.removeCallbacksAndMessages(null);
             if (isViewAttached && floatingLayout != null && windowManager != null) {
                 windowManager.removeView(floatingLayout);
+            }
+            if (webView != null) {
+                webView.stopLoading();
+                webView.destroy();
             }
         } catch (Throwable t) {
             t.printStackTrace();
