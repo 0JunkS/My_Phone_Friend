@@ -28,6 +28,11 @@
   align-items: center;
   transform-origin: 50% 80%;
   transition: transform 0.15s ease-out;
+  pointer-events: none !important;
+}
+
+.character-body-wrapper * {
+  pointer-events: none !important;
 }
 
 /* ==========================================================================

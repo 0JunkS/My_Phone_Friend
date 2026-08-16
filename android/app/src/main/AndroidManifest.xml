@@ -35,6 +35,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Floating Screen Pet Background Service -->
+        <service
+            android:name=".FloatingPetService"
+            android:exported="false" />
     </application>
 
     <!-- Permissions for Internet, Audio, and Floating System Overlay on Android -->

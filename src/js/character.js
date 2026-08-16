@@ -476,11 +476,19 @@ export class CharacterController {
      EVENTS & TRIPLE TAP DETECTION
      ======================================================================== */
   attachEvents() {
+    let isTracking = false;
+
     const getCoords = (e) => {
       if (e.touches && e.touches.length > 0) {
         return {
           x: e.touches[0].clientX ?? e.touches[0].pageX ?? 0,
           y: e.touches[0].clientY ?? e.touches[0].pageY ?? 0
+        };
+      }
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        return {
+          x: e.changedTouches[0].clientX ?? e.changedTouches[0].pageX ?? 0,
+          y: e.changedTouches[0].clientY ?? e.changedTouches[0].pageY ?? 0
         };
       }
       return {
@@ -489,7 +497,9 @@ export class CharacterController {
       };
     };
 
-    const onPointerDown = (e) => {
+    const handleStart = (e) => {
+      if (isTracking) return;
+      isTracking = true;
       this.isDragging = true;
       this.hasTriggeredLongPress = false;
       this.dragDistance = 0;
@@ -506,6 +516,7 @@ export class CharacterController {
       this.pointerVx = 0;
       this.pointerVy = 0;
 
+      if (this.longPressTimer) clearTimeout(this.longPressTimer);
       this.longPressRing.classList.add('charging');
       this.longPressTimer = setTimeout(() => {
         if (this.isDragging && this.dragDistance < 15) {
@@ -521,8 +532,8 @@ export class CharacterController {
       this.setState(CHARACTER_STATES.LIFTED);
     };
 
-    const onPointerMove = (e) => {
-      if (!this.isDragging) return;
+    const handleMove = (e) => {
+      if (!isTracking || !this.isDragging) return;
       const coords = getCoords(e);
 
       const dx = coords.x - this.lastPointerX;
@@ -547,12 +558,13 @@ export class CharacterController {
       this.updateTransform();
     };
 
-    const onPointerUp = (e) => {
-      if (!this.isDragging) return;
+    const handleEnd = (e) => {
+      if (!isTracking) return;
+      isTracking = false;
       this.isDragging = false;
       this.longPressRing.classList.remove('charging');
 
-      if (e.pointerId && this.el.releasePointerCapture) {
+      if (e && e.pointerId && this.el.releasePointerCapture) {
         try { this.el.releasePointerCapture(e.pointerId); } catch (err) {}
       }
 
@@ -562,8 +574,8 @@ export class CharacterController {
       }
 
       if (!this.hasTriggeredLongPress) {
-        if (this.dragDistance < 12) {
-          // Tap event -> Register multi-tap
+        if (this.dragDistance < 15) {
+          // Clean Tap event -> Register multi-tap
           const now = Date.now();
           this.tapTimestamps.push(now);
           this.tapTimestamps = this.tapTimestamps.filter(t => now - t <= this.tripleTapWindow);
@@ -595,15 +607,21 @@ export class CharacterController {
       }
     };
 
-    this.el.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove, { passive: false });
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
-
-    // Fallback touch listeners for mobile webviews
-    this.el.addEventListener('touchstart', onPointerDown, { passive: true });
-    window.addEventListener('touchmove', onPointerMove, { passive: true });
-    window.addEventListener('touchend', onPointerUp, { passive: true });
+    // Attach Unified Pointer or Touch Events
+    if (window.PointerEvent) {
+      this.el.addEventListener('pointerdown', handleStart);
+      window.addEventListener('pointermove', handleMove, { passive: false });
+      window.addEventListener('pointerup', handleEnd);
+      window.addEventListener('pointercancel', handleEnd);
+    } else {
+      this.el.addEventListener('touchstart', handleStart, { passive: true });
+      window.addEventListener('touchmove', handleMove, { passive: true });
+      window.addEventListener('touchend', handleEnd, { passive: true });
+      window.addEventListener('touchcancel', handleEnd, { passive: true });
+      this.el.addEventListener('mousedown', handleStart);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+    }
   }
 
   getViewportSize() {
