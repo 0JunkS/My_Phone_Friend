@@ -24,7 +24,7 @@ jobs:
 
       - name: Install NPM Dependencies
         run: |
-          npm ci || npm install
+          npm install --no-audit
 
       - name: Build Web Application
         run: |
