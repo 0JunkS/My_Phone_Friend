@@ -85,6 +85,12 @@ public class FloatingPetService extends Service {
         startForeground(NOTIFICATION_ID, notification);
     }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        startForegroundServiceWithNotification();
+        return START_STICKY;
+    }
+
     private void createNativeFloatingPet() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
@@ -100,6 +106,7 @@ public class FloatingPetService extends Service {
                 dpToPx(130),
                 layoutType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
         );

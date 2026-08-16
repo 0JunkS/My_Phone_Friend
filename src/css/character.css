@@ -4,6 +4,8 @@
 
 .character-container {
   position: fixed;
+  top: 0;
+  left: 0;
   width: 110px;
   height: 120px;
   user-select: none;
@@ -12,7 +14,7 @@
   cursor: grab;
   z-index: 999999;
   pointer-events: auto !important;
-  will-change: left, top;
+  will-change: transform;
 }
 
 .character-container:active {
