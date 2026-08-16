@@ -437,7 +437,7 @@ html, body {
 }
 
 /* ==========================================================================
-   GLOBAL PERSISTENT CHARACTER LAYER
+   GLOBAL PERSISTENT CHARACTER LAYER & OVERLAY MODE
    ========================================================================== */
 #global-character-layer {
   position: fixed;
@@ -447,6 +447,26 @@ html, body {
   pointer-events: none;
   z-index: 9999;
   overflow: hidden;
+}
+
+/* Background Overlay Mode (Android Floating Pet Window) */
+body.mode-overlay {
+  background: transparent !important;
+  background-color: transparent !important;
+  overflow: hidden;
+}
+
+body.mode-overlay #home-view,
+body.mode-overlay #companion-view,
+body.mode-overlay .ambient-background,
+body.mode-overlay .glow-orb {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body.mode-overlay #global-character-layer {
+  background: transparent !important;
 }
 
 /* ==========================================================================

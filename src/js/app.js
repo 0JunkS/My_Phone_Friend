@@ -21,6 +21,10 @@ class App {
   }
 
   init() {
+    if (window.location.search.includes('mode=overlay') || window.isOverlayMode) {
+      document.body.classList.add('mode-overlay');
+    }
+
     // 1. Initialize Character directly on document.body for 100% reliable mobile touch hit testing
     const container = document.body;
     this.character = new CharacterController(container, {
