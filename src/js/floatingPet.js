@@ -33,6 +33,21 @@ export class FloatingPetEngine {
   async openFloatingPet() {
     sound.playMenuOpen();
 
+    // 0. Check Android Native Bridge
+    if (window.AndroidPetBridge) {
+      if (!window.AndroidPetBridge.isOverlayGranted()) {
+        window.AndroidPetBridge.requestPermission();
+        alert('스마트폰 화면 위에 펫을 띄우려면 [다른 앱 위에 표시] 권한을 허용해주세요! 🍌');
+        return false;
+      }
+      window.AndroidPetBridge.startOverlay();
+      this.isFloating = true;
+      this.updateUiState(true);
+      sound.playHappy();
+      this.app.character.say('스마트폰 화면 위 상시 플로팅 시작! 🍌✨', 3000);
+      return true;
+    }
+
     // 1. Try Document Picture-in-Picture API (Chrome/Edge Native Always-on-Top Window)
     if ('documentPictureInPicture' in window) {
       try {
@@ -154,6 +169,9 @@ export class FloatingPetEngine {
   }
 
   closeFloatingPet() {
+    if (window.AndroidPetBridge) {
+      window.AndroidPetBridge.stopOverlay();
+    }
     if (this.pipWindow) {
       try { this.pipWindow.close(); } catch (e) {}
       this.pipWindow = null;
