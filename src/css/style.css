@@ -437,6 +437,19 @@ html, body {
 }
 
 /* ==========================================================================
+   GLOBAL PERSISTENT CHARACTER LAYER
+   ========================================================================== */
+#global-character-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+/* ==========================================================================
    COMPANION ROAM MODE (Screen Pet Mode)
    ========================================================================== */
 #companion-view {
@@ -445,7 +458,8 @@ html, body {
   width: 100vw;
   height: 100vh;
   background: transparent;
-  pointer-events: none; /* Only character receives pointer events */
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* Background overlay when companion mode is active inside web */

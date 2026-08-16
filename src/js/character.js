@@ -476,19 +476,33 @@ export class CharacterController {
      EVENTS & TRIPLE TAP DETECTION
      ======================================================================== */
   attachEvents() {
+    const getCoords = (e) => {
+      if (e.touches && e.touches.length > 0) {
+        return {
+          x: e.touches[0].clientX ?? e.touches[0].pageX ?? 0,
+          y: e.touches[0].clientY ?? e.touches[0].pageY ?? 0
+        };
+      }
+      return {
+        x: e.clientX ?? e.pageX ?? 0,
+        y: e.clientY ?? e.pageY ?? 0
+      };
+    };
+
     const onPointerDown = (e) => {
-      e.preventDefault();
       this.isDragging = true;
       this.hasTriggeredLongPress = false;
       this.dragDistance = 0;
 
-      const pageX = e.touches ? e.touches[0].pageX : e.pageX;
-      const pageY = e.touches ? e.touches[0].pageY : e.pageY;
+      if (e.pointerId && this.el.setPointerCapture) {
+        try { this.el.setPointerCapture(e.pointerId); } catch (err) {}
+      }
 
-      this.dragStartX = pageX - this.x;
-      this.dragStartY = pageY - this.y;
-      this.lastPointerX = pageX;
-      this.lastPointerY = pageY;
+      const coords = getCoords(e);
+      this.dragStartX = coords.x - this.x;
+      this.dragStartY = coords.y - this.y;
+      this.lastPointerX = coords.x;
+      this.lastPointerY = coords.y;
       this.pointerVx = 0;
       this.pointerVy = 0;
 
@@ -509,11 +523,10 @@ export class CharacterController {
 
     const onPointerMove = (e) => {
       if (!this.isDragging) return;
-      const pageX = e.touches ? e.touches[0].pageX : e.pageX;
-      const pageY = e.touches ? e.touches[0].pageY : e.pageY;
+      const coords = getCoords(e);
 
-      const dx = pageX - this.lastPointerX;
-      const dy = pageY - this.lastPointerY;
+      const dx = coords.x - this.lastPointerX;
+      const dy = coords.y - this.lastPointerY;
       this.dragDistance += Math.abs(dx) + Math.abs(dy);
 
       if (this.dragDistance > 15 && this.longPressTimer) {
@@ -524,11 +537,11 @@ export class CharacterController {
 
       this.pointerVx = dx * 0.4;
       this.pointerVy = dy * 0.4;
-      this.lastPointerX = pageX;
-      this.lastPointerY = pageY;
+      this.lastPointerX = coords.x;
+      this.lastPointerY = coords.y;
 
-      this.x = pageX - this.dragStartX;
-      this.y = pageY - this.dragStartY;
+      this.x = coords.x - this.dragStartX;
+      this.y = coords.y - this.dragStartY;
 
       this.constrainBounds();
       this.updateTransform();
@@ -539,17 +552,20 @@ export class CharacterController {
       this.isDragging = false;
       this.longPressRing.classList.remove('charging');
 
+      if (e.pointerId && this.el.releasePointerCapture) {
+        try { this.el.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+
       if (this.longPressTimer) {
         clearTimeout(this.longPressTimer);
         this.longPressTimer = null;
       }
 
       if (!this.hasTriggeredLongPress) {
-        if (this.dragDistance < 10) {
+        if (this.dragDistance < 12) {
           // Tap event -> Register multi-tap
           const now = Date.now();
           this.tapTimestamps.push(now);
-          // Filter taps within window
           this.tapTimestamps = this.tapTimestamps.filter(t => now - t <= this.tripleTapWindow);
 
           if (this.tapTimestamps.length >= 3) {
@@ -567,11 +583,11 @@ export class CharacterController {
             if (this.onTap) this.onTap();
           }
         } else {
-          // Released after dragging
+          // Released after dragging (Stays where dropped)
           sound.playDrop();
           this.petCare(5);
-          this.vx = Math.max(-8, Math.min(8, this.pointerVx));
-          this.vy = Math.max(-8, Math.min(8, this.pointerVy));
+          this.vx = Math.max(-6, Math.min(6, this.pointerVx));
+          this.vy = Math.max(-6, Math.min(6, this.pointerVy));
           this.setState(CHARACTER_STATES.WALK);
         }
       } else {
@@ -583,6 +599,11 @@ export class CharacterController {
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
+
+    // Fallback touch listeners for mobile webviews
+    this.el.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp, { passive: true });
   }
 
   getViewportSize() {
