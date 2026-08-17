@@ -35,16 +35,9 @@
        CHARACTER BASE STYLES
        ========================================================= */
     .character-container {
-      position: absolute;
-      /* Centered (not pinned to the top-left corner) so the lifted/flail
-         animation has equal margin on every side and its limbs don't get
-         clipped against the small native overlay window's edges. The JS
-         controller runs in staticPosition mode here and never writes
-         left/top itself — the OS WindowManager drags the whole window
-         instead — so this fixed centering is safe. */
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
       width: 110px;
       height: 120px;
       user-select: none;
@@ -254,22 +247,6 @@
     .character-container[data-state="sad"] .nano-leg-left,
     .character-container[data-state="sad"] .nano-leg-right { animation: nanoSadWalk 1.4s infinite alternate ease-in-out; }
 
-    /* =========================================================
-       EMOTION PARTICLES (Hearts, Tears, Stars, Sweat)
-       ========================================================= */
-    .particle-fx {
-      position: absolute;
-      pointer-events: none;
-      z-index: 10001;
-      will-change: transform, opacity;
-      animation: floatFadeOut 1.2s forwards cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes floatFadeOut {
-      0%   { opacity: 1; transform: translate(0,0) scale(0.6); }
-      50%  { opacity: 0.9; transform: translate(var(--dx,0px), var(--dy,-30px)) scale(1.2); }
-      100% { opacity: 0; transform: translate(var(--dx,0px), calc(var(--dy,-30px) - 25px)) scale(0.8); }
-    }
-
     /* Long press ring */
     .long-press-ring {
       position: absolute;
@@ -291,8 +268,8 @@
       opacity: 1;
     }
   </style>
-  <script type="module" crossorigin src="./assets/overlay-Y5pYKqlT.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/customizer-CveRa70b.js">
+  <script type="module" crossorigin src="./assets/overlay-B-cODhM2.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/customizer-D41sh6Qg.js">
 </head>
 <body class="mode-overlay">
   <div id="global-character-layer"></div>

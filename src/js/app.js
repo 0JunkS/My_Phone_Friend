@@ -597,12 +597,20 @@ class App {
       }
     });
 
-    // Limbs toggle: the <label> wrapping the checkbox handles click → toggle automatically.
-    // We only need to listen to the 'change' event to update UI and save state.
+    // Limbs toggle click
     if (limbsCheckbox) {
       limbsCheckbox.addEventListener('change', () => {
         updateLimbsToggleUI(limbsCheckbox.checked);
         this.customizer.setShowLimbs(limbsCheckbox.checked);
+      });
+    }
+    // Clicking the track/thumb also toggles
+    if (limbsTrack) {
+      limbsTrack.addEventListener('click', () => {
+        if (limbsCheckbox) {
+          limbsCheckbox.checked = !limbsCheckbox.checked;
+          limbsCheckbox.dispatchEvent(new Event('change'));
+        }
       });
     }
 

@@ -197,25 +197,11 @@ class OverlayMicEngine {
 
     const micEl = document.getElementById('mic-indicator');
 
-    // Request window focus so SpeechRecognition can acquire mic in overlay mode
-    try {
-      if (window.OverlayFocusBridge) window.OverlayFocusBridge.requestFocus();
-    } catch(e) {}
-
     this.isListening = true;
     if (micEl) micEl.classList.add('active');
     this.character.setState(CHARACTER_STATES.HAPPY, 8000);
     this.character.say('말씀하세요! 듣고 있어요 🎙️✨', 3000);
     spawnEmote(document.body, '🎙️', 2);
-
-    const done = () => {
-      this.isListening = false;
-      if (micEl) micEl.classList.remove('active');
-      // Release focus back so overlay doesn't intercept other app touches
-      try {
-        if (window.OverlayFocusBridge) window.OverlayFocusBridge.releaseFocus();
-      } catch(e) {}
-    };
 
     this.recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript.trim();
@@ -223,7 +209,8 @@ class OverlayMicEngine {
     };
 
     this.recognition.onerror = (event) => {
-      done();
+      this.isListening = false;
+      if (micEl) micEl.classList.remove('active');
       const msg = event.error === 'no-speech'
         ? '아무 소리도 안 들렸어요! 다시 눌러서 말해주세요 🎙️'
         : `음성 인식 오류: ${event.error}`;
@@ -231,13 +218,15 @@ class OverlayMicEngine {
     };
 
     this.recognition.onend = () => {
-      done();
+      this.isListening = false;
+      if (micEl) micEl.classList.remove('active');
     };
 
     try {
       this.recognition.start();
     } catch (e) {
-      done();
+      this.isListening = false;
+      if (micEl) micEl.classList.remove('active');
       this.character.say('마이크를 시작할 수 없어요 😢', 3000);
     }
   }
@@ -290,10 +279,6 @@ class OverlayApp {
 
     this.character = new CharacterController(container, {
       type: CHARACTER_TYPES.NANO_BANANA,
-      // The native FloatingPetService already drags/wanders the whole
-      // overlay window around the screen, so the character must stay fixed
-      // inside its own small window rather than also positioning itself.
-      staticPosition: true,
       onTap: () => {
         // Single tap: random affection emote
         const taps = ['반가워요! 🍌✨', '헤헤! 간지러워요! 😄', '꼭 안아줘요! 💛', '오늘도 화이팅! 🎉'];
