@@ -530,6 +530,9 @@ body.mode-overlay .character-container {
   margin: auto !important;
   pointer-events: auto !important;
   touch-action: none !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* ==========================================================================
