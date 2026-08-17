@@ -83,6 +83,25 @@ export class CharacterController {
     this.onTap = options.onTap || null;
     this.onTripleTap = options.onTripleTap || null;
 
+    // ------------------------------------------------------------------
+    // Window-follow mode: used ONLY by the Android background overlay.
+    // The OS-level overlay window is a small transparent surface (for
+    // rendering/perf reasons on Android) instead of a real full-screen
+    // window, so it cannot itself be the "viewport" for wandering.
+    // Instead, this same physics/wander code below computes the
+    // character's logical position against the REAL screen size
+    // (this.viewportOverride), and reports every change via
+    // onPositionChange(x, y) so the caller can move the native overlay
+    // window itself. The character is always drawn at a fixed local
+    // offset inside that small window. This guarantees the in-app view
+    // and the background overlay share the exact same movement logic,
+    // instead of running two independent wander systems.
+    // ------------------------------------------------------------------
+    this.windowFollow = !!options.windowFollow;
+    this.viewportOverride = options.viewportOverride || null; // {width, height}
+    this.onPositionChange = options.onPositionChange || null;
+    this.localRenderOffset = options.localRenderOffset || { x: 8, y: 34 }; // room for speech bubble
+
     // DOM Structure
     this.el = document.createElement('div');
     this.el.className = 'character-container';
@@ -409,6 +428,35 @@ export class CharacterController {
     }
   }
 
+  /**
+   * Single shared tap/triple-tap handler. Used by the in-DOM pointer/touch
+   * listeners below, and also called directly by the Android overlay
+   * bridge (window.petTouched) when the native window intercepts the raw
+   * touch itself — so tap and triple-tap-for-mic behave identically
+   * whether the pet is on-screen in the app or floating in the
+   * background overlay.
+   */
+  registerTap() {
+    const now = Date.now();
+    this.tapTimestamps.push(now);
+    this.tapTimestamps = this.tapTimestamps.filter(t => now - t <= this.tripleTapWindow);
+
+    if (this.tapTimestamps.length >= 3) {
+      // Triple tap detected!
+      this.tapTimestamps = [];
+      sound.playHappy();
+      this.say('말씀하세요! 듣고 있어요 🎙️✨', 2500);
+      if (this.onTripleTap) {
+        this.onTripleTap();
+      }
+    } else {
+      // Single gentle tap/pet
+      sound.playTap();
+      this.petCare(10);
+      if (this.onTap) this.onTap();
+    }
+  }
+
   setState(newState, autoRevertMs = 0) {
     if (this.state === newState) return;
     this.state = newState;
@@ -449,14 +497,16 @@ export class CharacterController {
       sweat: ['💦', '❕', '❗']
     };
     const list = emojis[type] || ['✨'];
+    const originX = this.windowFollow ? this.localRenderOffset.x : this.x;
+    const originY = this.windowFollow ? this.localRenderOffset.y : this.y;
 
     for (let i = 0; i < count; i++) {
       const p = document.createElement('div');
       p.className = 'particle-fx';
       p.textContent = list[Math.floor(Math.random() * list.length)];
       p.style.fontSize = `${Math.floor(14 + Math.random() * 10)}px`;
-      p.style.left = `${this.x + 30 + Math.random() * 40}px`;
-      p.style.top = `${this.y + 10 + Math.random() * 30}px`;
+      p.style.left = `${originX + 30 + Math.random() * 40}px`;
+      p.style.top = `${originY + 10 + Math.random() * 30}px`;
 
       const dx = (Math.random() - 0.5) * 80;
       const dy = -(20 + Math.random() * 50);
@@ -626,25 +676,7 @@ export class CharacterController {
 
       if (!this.hasTriggeredLongPress) {
         if (this.dragDistance < 18) {
-          // Clean Tap event -> Register multi-tap
-          const now = Date.now();
-          this.tapTimestamps.push(now);
-          this.tapTimestamps = this.tapTimestamps.filter(t => now - t <= this.tripleTapWindow);
-
-          if (this.tapTimestamps.length >= 3) {
-            // Triple tap detected!
-            this.tapTimestamps = [];
-            sound.playHappy();
-            this.say('말씀하세요! 듣고 있어요 🎙️✨', 2500);
-            if (this.onTripleTap) {
-              this.onTripleTap();
-            }
-          } else {
-            // Single gentle tap/pet
-            sound.playTap();
-            this.petCare(10);
-            if (this.onTap) this.onTap();
-          }
+          this.registerTap();
         } else {
           // Released after dragging (Stays where dropped)
           sound.playDrop();
@@ -672,6 +704,9 @@ export class CharacterController {
   }
 
   getViewportSize() {
+    if (this.windowFollow && this.viewportOverride) {
+      return this.viewportOverride;
+    }
     try {
       const ownerDoc = this.container.ownerDocument || document;
       const ownerWin = ownerDoc.defaultView || window;
@@ -682,6 +717,39 @@ export class CharacterController {
     } catch (e) {
       return { width: window.innerWidth, height: window.innerHeight };
     }
+  }
+
+  /**
+   * Called by the Android overlay bridge once the real device screen size
+   * is known, so wandering decisions use actual screen bounds instead of
+   * the small overlay window's own tiny viewport.
+   */
+  setViewportOverride(width, height) {
+    this.viewportOverride = { width, height };
+    this.constrainBounds();
+  }
+
+  /**
+   * Called by the Android overlay bridge after a native-driven drag ends,
+   * so the shared physics loop resumes wandering from the position the
+   * user actually dropped the pet at (keeps the movement path continuous
+   * across native <-> JS handoffs).
+   */
+  syncPositionFromNative(x, y) {
+    this.x = x;
+    this.y = y;
+    this.constrainBounds();
+    this.updateTransform();
+  }
+
+  /**
+   * Called by the Android overlay bridge while the native window itself
+   * is being dragged, so the shared physics loop (startPhysicsLoop)
+   * pauses autonomous wandering instead of fighting the drag.
+   */
+  setExternalDragging(isDragging) {
+    this.isDragging = !!isDragging;
+    this.setState(isDragging ? CHARACTER_STATES.LIFTED : CHARACTER_STATES.WALK);
   }
 
   constrainBounds() {
@@ -757,8 +825,18 @@ export class CharacterController {
     this.el.style.setProperty('--char-scale', scaleFactor);
     this.el.style.width = `${w}px`;
     this.el.style.height = `${h}px`;
-    this.el.style.left = `${this.x || 0}px`;
-    this.el.style.top = `${this.y || 0}px`;
+
+    if (this.windowFollow) {
+      // The DOM element stays put at a fixed local offset inside the
+      // small native overlay window; the *window itself* is moved to
+      // this.x/this.y by the caller via onPositionChange below.
+      this.el.style.left = `${this.localRenderOffset.x}px`;
+      this.el.style.top = `${this.localRenderOffset.y}px`;
+    } else {
+      this.el.style.left = `${this.x || 0}px`;
+      this.el.style.top = `${this.y || 0}px`;
+    }
+
     this.el.style.display = 'block';
     this.el.style.visibility = 'visible';
     this.el.style.opacity = '1';
@@ -766,6 +844,10 @@ export class CharacterController {
     const facingScale = this.facingRight ? 1 : -1;
     this.bodyWrapper.style.setProperty('--char-facing', facingScale);
     this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
+
+    if (this.windowFollow && this.onPositionChange) {
+      this.onPositionChange(Math.round(this.x || 0), Math.round(this.y || 0), this.facingRight);
+    }
   }
 
   updateCustomization({ type, customPhotoUrl, accessory, hueShift, scale, showLimbs }) {

@@ -23,6 +23,7 @@ window.applySyncedPetData = function(data) {
     window.appInstance.customizer.currentHue = data.hueShift || 0;
     window.appInstance.customizer.currentScale = data.scale || 1.0;
     window.appInstance.customizer.customPhotoUrl = data.customPhotoUrl || null;
+    window.appInstance.customizer.showLimbs = data.showLimbs !== false;
     window.appInstance.customizer.applyCustomization();
   }
 };
@@ -103,6 +104,18 @@ class App {
     }, 15000);
   }
 
+  /**
+   * OVERLAY MODE: this is the SAME index.html, same App class, same
+   * character.js / customizer.js / aiChat.js used by the normal in-app
+   * view above (init()) — loaded with ?mode=overlay by the Android
+   * background service instead of a separate duplicate HTML/JS file.
+   * That means appearance, accessories, and movement logic can never
+   * drift between the app and the background pet: it's literally the
+   * same code path. The `mode-overlay` CSS class (see style.css) hides
+   * every bit of app chrome and leaves only the transparent character
+   * layer visible, so the real background (home screen / other apps)
+   * shows through underneath the pet.
+   */
   initOverlayMode() {
     let container = document.getElementById('global-character-layer');
     if (!container) {
@@ -111,21 +124,38 @@ class App {
       document.body.appendChild(container);
     }
 
+    const isNativeOverlay = !!window.AndroidPetBridge;
+
     this.character = new CharacterController(container, {
       type: CHARACTER_TYPES.NANO_BANANA,
       startX: 25,
       startY: 44,
       minY: 40,
+      // Native Android overlay: the OS-level window is a small tracking
+      // surface, so hand wandering decisions the real screen size and
+      // let this same physics code drive the native window position.
+      windowFollow: isNativeOverlay,
+      viewportOverride: { width: window.innerWidth, height: window.innerHeight },
+      onPositionChange: isNativeOverlay
+        ? (x, y) => { window.AndroidPetBridge.updatePetPosition(x, y); }
+        : null,
       onTap: () => {
         this.character.petCare(10);
         this.character.say('반가워요! 🍌✨', 2500);
+      },
+      onTripleTap: () => {
+        this.startOverlayMicListening();
       }
     });
 
     // 1. Initialize Customizer in Overlay Mode to load and apply exact pet type, accessory, hue, scale, photo
     this.customizer = new CustomizerEngine(this.character);
 
-    // 2. Real-time character customization sync across main app & overlay service
+    // 2. Same AI voice/chat engine as the foreground app (memory, persona
+    // replies, optional Gemini) — no separate simplified copy.
+    this.aiChat = new AiChatEngine(this.character);
+
+    // 3. Real-time character customization sync across main app & overlay service
     const syncCharacterPref = () => {
       if (this.customizer) {
         this.customizer.loadPreferences();
@@ -136,7 +166,55 @@ class App {
     });
     window.addEventListener('characterUpdated', syncCharacterPref);
 
+    // 4. Bridge hooks called by FloatingPetService (native side). Defined
+    // here rather than in a separate overlay-only script, so there is a
+    // single implementation shared with the rest of the app.
+    window.setOverlayScreenSize = (width, height) => {
+      this.character.setViewportOverride(width, height);
+    };
+    window.syncNativeDragPosition = (x, y) => {
+      this.character.syncPositionFromNative(x, y);
+    };
+    window.setOverlayDragging = (isDragging) => {
+      this.character.setExternalDragging(isDragging);
+    };
+    window.petTouched = () => {
+      this.character.registerTap();
+    };
+
     this.character.say('곁에 있을게요! 🍌✨', 7000);
+  }
+
+  /**
+   * Triple-tap mic trigger for overlay mode. Reuses the exact same
+   * AiChatEngine (memory lookup, persona replies, optional Gemini) as
+   * the in-app chat modal — the only difference is the reply is shown
+   * via the character's speech bubble instead of the (hidden, in
+   * overlay mode) chat modal UI.
+   */
+  startOverlayMicListening() {
+    if (!this.aiChat) return;
+    if (this.aiChat.isListening) {
+      this.aiChat.stopListening();
+      return;
+    }
+
+    this.character.setState(CHARACTER_STATES.HAPPY, 8000);
+    this.character.say('말씀하세요! 듣고 있어요 🎙️✨', 2500);
+
+    this.aiChat.startListening(
+      (transcript) => {
+        this.character.say(`"${transcript}"`, 1800);
+        setTimeout(() => this.aiChat.processMessage(transcript), 1400);
+      },
+      () => {},
+      (err) => {
+        const msg = err === 'no-speech'
+          ? '아무 소리도 안 들렸어요! 다시 세 번 눌러주세요 🎙️'
+          : '이 기기에서는 음성 인식을 사용할 수 없어요 😢';
+        this.character.say(msg, 3000);
+      }
+    );
   }
 
   /* ========================================================================
@@ -597,20 +675,32 @@ class App {
       }
     });
 
-    // Limbs toggle click
+    // Limbs toggle: directly bind the click on the visible switch instead of
+    // only relying on native <label> → hidden checkbox forwarding, since some
+    // Android WebView builds don't reliably forward clicks to a
+    // display:none input even when wrapped in its <label>. This guarantees
+    // the toggle works everywhere (desktop browser, in-app WebView, overlay).
     if (limbsCheckbox) {
+      const toggleLimbs = () => {
+        limbsCheckbox.checked = !limbsCheckbox.checked;
+        updateLimbsToggleUI(limbsCheckbox.checked);
+        this.customizer.setShowLimbs(limbsCheckbox.checked);
+      };
+
+      const limbsToggleLabel = limbsCheckbox.closest('.toggle-switch');
+      if (limbsToggleLabel) {
+        limbsToggleLabel.addEventListener('click', (e) => {
+          e.preventDefault();
+          toggleLimbs();
+        });
+      }
+
+      // Still listen for 'change' in case the label forwarding does fire
+      // natively (e.g. keyboard/space-bar toggling) so state stays in sync
+      // without double-toggling.
       limbsCheckbox.addEventListener('change', () => {
         updateLimbsToggleUI(limbsCheckbox.checked);
         this.customizer.setShowLimbs(limbsCheckbox.checked);
-      });
-    }
-    // Clicking the track/thumb also toggles
-    if (limbsTrack) {
-      limbsTrack.addEventListener('click', () => {
-        if (limbsCheckbox) {
-          limbsCheckbox.checked = !limbsCheckbox.checked;
-          limbsCheckbox.dispatchEvent(new Event('change'));
-        }
       });
     }
 

@@ -10,9 +10,7 @@ import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -31,11 +29,7 @@ public class FloatingPetService extends Service {
     private WindowManager.LayoutParams params;
     private WebView webView;
     private boolean isViewAttached = false;
-    private Handler wanderHandler;
-    private Runnable wanderRunnable;
     private boolean isTouching = false;
-    private float wanderVelocityX = 2.0f;
-    private float wanderVelocityY = 1.35f;
 
     private static final String CHANNEL_ID = "FloatingPetChannel";
     private static final int NOTIFICATION_ID = 1001;
@@ -226,6 +220,11 @@ public class FloatingPetService extends Service {
             webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
             webView.setAlpha(1f);
             floatingLayout.setAlpha(1f);
+            // Bridge that lets the SAME character.js physics/wander code that
+            // drives the in-app view also drive this native overlay window,
+            // instead of a second, independent native wander loop.
+            webView.addJavascriptInterface(new AndroidPetBridge(), "AndroidPetBridge");
+
             webView.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
@@ -237,6 +236,18 @@ public class FloatingPetService extends Service {
                 public void onPageFinished(WebView view, String url) {
                     super.onPageFinished(view, url);
                     view.evaluateJavascript("document.documentElement.classList.add('mode-overlay'); document.body.classList.add('mode-overlay');", null);
+
+                    // Tell the shared JS physics code the REAL screen size (in CSS
+                    // px / dp) so it wanders across the whole screen even though
+                    // this native window itself is only a small tracking surface.
+                    android.util.DisplayMetrics m = getResources().getDisplayMetrics();
+                    int screenWidthDp = Math.round(m.widthPixels / m.density);
+                    int screenHeightDp = Math.round(m.heightPixels / m.density);
+                    view.evaluateJavascript(
+                            "window.setOverlayScreenSize && window.setOverlayScreenSize(" + screenWidthDp + "," + screenHeightDp + ");",
+                            null
+                    );
+
                     try {
                         android.content.SharedPreferences prefs = getSharedPreferences("MyPetPrefs", MODE_PRIVATE);
                         String savedJson = prefs.getString("pet_data_json", null);
@@ -250,20 +261,29 @@ public class FloatingPetService extends Service {
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     super.onReceivedError(view, errorCode, description, failingUrl);
                     if (failingUrl != null && failingUrl.startsWith("file:///android_asset/")) {
-                        view.loadUrl("file:///android_asset/public/pet-overlay.html");
+                        view.loadUrl("file:///android_asset/public/index.html?mode=overlay");
                     }
                 }
             });
 
-            // Load the dedicated pet overlay HTML containing ZERO main app text/UI
-            webView.loadUrl("file:///android_asset/public/pet-overlay.html");
+            // Load the SAME app page used in the foreground, with ?mode=overlay.
+            // The mode-overlay CSS (src/css/style.css) hides all app chrome and
+            // leaves only the transparent character layer visible, so this is
+            // literally the same HTML/JS/CSS driving both surfaces instead of a
+            // separate duplicate overlay file.
+            webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
 
             floatingLayout.addView(webView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
             ));
 
-            // Native Touch & Drag listener with strict screen wall boundary clamping
+            // Native Touch & Drag listener with strict screen wall boundary clamping.
+            // Dragging itself is still handled natively for a snappy, GPU-composited
+            // feel, but the shared character.js is told when a drag starts/ends so
+            // its own wander loop doesn't fight the user's finger, and the final
+            // drop position is handed back to it so wandering resumes from exactly
+            // where the pet was released (same as dropping it in the app view).
             webView.setOnTouchListener(new View.OnTouchListener() {
                 private int initialX, initialY;
                 private float initialTouchX, initialTouchY;
@@ -281,6 +301,7 @@ public class FloatingPetService extends Service {
                             initialY = params.y;
                             initialTouchX = event.getRawX();
                             initialTouchY = event.getRawY();
+                            webView.evaluateJavascript("window.setOverlayDragging && window.setOverlayDragging(true);", null);
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
@@ -312,7 +333,19 @@ public class FloatingPetService extends Service {
                                         "window.petTouched && window.petTouched();",
                                         null
                                 );
+                            } else {
+                                // Hand the drop position back to the shared physics
+                                // code (converted device px -> dp) so autonomous
+                                // wandering continues from here.
+                                android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+                                int dropXDp = Math.round(params.x / dm.density);
+                                int dropYDp = Math.round(params.y / dm.density);
+                                webView.evaluateJavascript(
+                                        "window.syncNativeDragPosition && window.syncNativeDragPosition(" + dropXDp + "," + dropYDp + ");",
+                                        null
+                                );
                             }
+                            webView.evaluateJavascript("window.setOverlayDragging && window.setOverlayDragging(false);", null);
                             isTouching = false;
                             return true;
                     }
@@ -325,7 +358,7 @@ public class FloatingPetService extends Service {
             floatingLayout.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
                 @Override
                 public void onGlobalLayout() {
-                    if (params == null || windowManager == null || !isViewAttached) return;
+                    if (params == null || windowManager == null || !isViewAttached || isTouching) return;
                     try {
                         int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
                         if (params.y > maxAllowedY) {
@@ -338,11 +371,40 @@ public class FloatingPetService extends Service {
 
             windowManager.addView(floatingLayout, params);
             isViewAttached = true;
-            startAutonomousWander();
 
         } catch (Throwable t) {
             t.printStackTrace();
             isViewAttached = false;
+        }
+    }
+
+    /**
+     * Moves this native overlay window to the position the shared
+     * character.js wander/physics loop has just computed (it is called
+     * from CharacterController.updateTransform() via
+     * window.AndroidPetBridge.updatePetPosition on every frame while in
+     * "windowFollow" mode). x/y arrive in CSS px (dp) to match the screen
+     * size handed to JS in setOverlayScreenSize, so they are converted to
+     * device px here.
+     */
+    private class AndroidPetBridge {
+        @android.webkit.JavascriptInterface
+        public void updatePetPosition(final int xDp, final int yDp) {
+            if (isTouching) return; // user's finger is authoritative during a drag
+            webView.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (params == null || windowManager == null || !isViewAttached || isTouching) return;
+                    try {
+                        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+                        int maxAllowedX = Math.max(0, dm.widthPixels - params.width);
+                        int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
+                        params.x = Math.max(0, Math.min(Math.round(xDp * dm.density), maxAllowedX));
+                        params.y = Math.max(0, Math.min(Math.round(yDp * dm.density), maxAllowedY));
+                        windowManager.updateViewLayout(floatingLayout, params);
+                    } catch (Throwable t) {}
+                }
+            });
         }
     }
 
@@ -357,43 +419,6 @@ public class FloatingPetService extends Service {
         return getResources().getDisplayMetrics().heightPixels;
     }
 
-    private void startAutonomousWander() {
-        if (wanderHandler != null && wanderRunnable != null) {
-            wanderHandler.removeCallbacks(wanderRunnable);
-        }
-        wanderHandler = new Handler(Looper.getMainLooper());
-        wanderRunnable = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (isViewAttached && floatingLayout != null && params != null && windowManager != null) {
-                        android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
-                        int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
-                        int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
-
-                        if (!isTouching) {
-                            params.x += Math.round(wanderVelocityX);
-                            params.y += Math.round(wanderVelocityY);
-                            if (params.x <= 0 || params.x >= maxAllowedX) {
-                                wanderVelocityX = -wanderVelocityX;
-                                params.x = Math.max(0, Math.min(params.x, maxAllowedX));
-                            }
-                            if (params.y <= 0 || params.y >= maxAllowedY) {
-                                wanderVelocityY = -wanderVelocityY;
-                                params.y = Math.max(0, Math.min(params.y, maxAllowedY));
-                            }
-                        }
-                        windowManager.updateViewLayout(floatingLayout, params);
-                    }
-                } catch (Throwable t) {}
-                if (wanderHandler != null && isViewAttached) {
-                    wanderHandler.postDelayed(this, 32);
-                }
-            }
-        };
-        wanderHandler.post(wanderRunnable);
-    }
-
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
@@ -402,11 +427,6 @@ public class FloatingPetService extends Service {
     public void onDestroy() {
         super.onDestroy();
         try {
-            if (wanderHandler != null && wanderRunnable != null) {
-                wanderHandler.removeCallbacks(wanderRunnable);
-                wanderHandler = null;
-                wanderRunnable = null;
-            }
             if (isViewAttached && floatingLayout != null && windowManager != null) {
                 windowManager.removeView(floatingLayout);
             }
