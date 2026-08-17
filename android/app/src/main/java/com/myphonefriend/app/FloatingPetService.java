@@ -223,13 +223,13 @@ public class FloatingPetService extends Service {
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     super.onReceivedError(view, errorCode, description, failingUrl);
                     if (failingUrl != null && failingUrl.startsWith("file:///android_asset/")) {
-                        view.loadUrl("file:///android_asset/public/index.html?mode=overlay");
+                        view.loadUrl("file:///android_asset/public/pet-overlay.html");
                     }
                 }
             });
 
-            // Load the full dynamic pet character engine in overlay mode
-            webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
+            // Load the dedicated pet overlay HTML containing ZERO main app text/UI
+            webView.loadUrl("file:///android_asset/public/pet-overlay.html");
 
             floatingLayout.addView(webView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,

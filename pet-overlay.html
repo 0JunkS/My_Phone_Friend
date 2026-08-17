@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Phone Friend Overlay</title>
+  <link rel="stylesheet" href="./src/css/style.css">
+  <link rel="stylesheet" href="./src/css/character.css">
+  <style>
+    html, body {
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      touch-action: none !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+    #global-character-layer {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: transparent !important;
+      pointer-events: auto;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 999999;
+      overflow: hidden !important;
+      touch-action: none !important;
+    }
+    .character-container {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      margin: auto !important;
+      pointer-events: auto !important;
+      touch-action: none !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+  </style>
+</head>
+<body class="mode-overlay">
+  <div id="global-character-layer"></div>
+  <script type="module" src="./src/js/overlay-entry.js"></script>
+</body>
+</html>

@@ -136,9 +136,8 @@ export class AiChatEngine {
     // 1. Check if user is asking about saved 3-day memories ("아까 내가 뭐 필요하다고 했었지?")
     if (memoryEngine.isQueryingNeeds(text)) {
       const memoryReply = memoryEngine.getMemoriesResponse();
-      this.character.setState(CHARACTER_STATES.HAPPY, 3500);
-      this.character.say('기억해둔 목록이에요! 🍌📦', 4000);
-      this.speak(memoryReply);
+      this.character.setState(CHARACTER_STATES.HAPPY, 4000);
+      this.character.say(memoryReply, 5000);
       return {
         reply: memoryReply,
         emotion: CHARACTER_STATES.HAPPY,
@@ -150,10 +149,9 @@ export class AiChatEngine {
     const extractedNeed = memoryEngine.extractNeedOrTask(text);
     if (extractedNeed) {
       const savedEntry = memoryEngine.addMemory(text, extractedNeed);
-      const reply = `알겠어요! "${savedEntry.item}" 기억해둘게요! 📝\n스마트폰에 3일 동안 잊지 않고 꼭 보관할게요! 🍌💛`;
-      this.character.setState(CHARACTER_STATES.HAPPY, 3500);
-      this.character.say(`"${savedEntry.item}" 3일간 기억 완료! ✨`, 4000);
-      this.speak(`알겠습니다! ${savedEntry.item} 필요하신 것 3일 동안 꼭 기억해둘게요!`);
+      const reply = `"${savedEntry.item}" 3일 동안 기억해둘게요! 📝✨`;
+      this.character.setState(CHARACTER_STATES.HAPPY, 4000);
+      this.character.say(reply, 5000);
       return {
         reply: reply,
         emotion: CHARACTER_STATES.HAPPY,
@@ -166,9 +164,8 @@ export class AiChatEngine {
       try {
         const geminiReply = await this.callGeminiApi(text);
         if (geminiReply) {
-          this.character.setState(CHARACTER_STATES.HAPPY, 3000);
-          this.character.say(geminiReply.substring(0, 35) + '...', 4000);
-          this.speak(geminiReply);
+          this.character.setState(CHARACTER_STATES.HAPPY, 4000);
+          this.character.say(geminiReply, 5500);
           return {
             reply: geminiReply,
             emotion: CHARACTER_STATES.HAPPY,
@@ -182,12 +179,12 @@ export class AiChatEngine {
 
     // 4. Built-in Smart Persona Engine (Rich offline replies)
     const personaResult = this.generatePersonaReply(text);
-    this.character.setState(personaResult.emotion, 3500);
-    this.character.say(personaResult.bubbleText, 4000);
-    this.speak(personaResult.reply);
+    const replyText = personaResult.reply;
+    this.character.setState(personaResult.emotion, 4000);
+    this.character.say(replyText, 5500);
 
     return {
-      reply: personaResult.reply,
+      reply: replyText,
       emotion: personaResult.emotion,
       memorySaved: false
     };

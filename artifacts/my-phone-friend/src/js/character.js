@@ -462,15 +462,58 @@ export class CharacterController {
     }
   }
 
-  say(text, durationMs = 3500) {
+  say(text, durationMs = 4500) {
     if (this.speechTimeout) clearTimeout(this.speechTimeout);
     this.speechBubble.textContent = text;
     this.speechBubble.classList.add('active');
     sound.playTalkBlip();
 
+    this.speakTTS(text);
+
     this.speechTimeout = setTimeout(() => {
       this.speechBubble.classList.remove('active');
     }, durationMs);
+  }
+
+  speakTTS(text) {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+
+      synth.cancel();
+
+      const cleanSpeech = text
+        .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
+        .trim();
+
+      if (!cleanSpeech) return;
+
+      const speak = () => {
+        const utterance = new SpeechSynthesisUtterance(cleanSpeech);
+        utterance.lang = 'ko-KR';
+        utterance.pitch = 1.35;
+        utterance.rate = 1.05;
+
+        const voices = synth.getVoices();
+        const koVoice = voices.find(v => v.lang.includes('ko') || v.lang.includes('KR'));
+        if (koVoice) {
+          utterance.voice = koVoice;
+        }
+
+        synth.speak(utterance);
+      };
+
+      if (synth.getVoices().length === 0) {
+        synth.onvoiceschanged = () => {
+          speak();
+          synth.onvoiceschanged = null;
+        };
+      } else {
+        speak();
+      }
+    } catch (e) {
+      console.warn('TTS Speech error:', e);
+    }
   }
 
   /* ========================================================================
