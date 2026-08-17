@@ -10,7 +10,10 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Rational;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
 
@@ -24,6 +27,28 @@ public class MainActivity extends BridgeActivity {
         try {
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().addJavascriptInterface(new AndroidPetBridge(), "AndroidPetBridge");
+
+                // Capacitor's default WebChromeClient does not grant getUserMedia /
+                // Web Speech API mic requests on its own, so the in-app triple-tap
+                // voice feature silently fails with "no mic". Extend it (instead of
+                // replacing it) so file-chooser and other Capacitor behavior is kept,
+                // and only auto-grant the audio resource when RECORD_AUDIO has
+                // already been approved by the user at the OS level.
+                this.bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(this.bridge) {
+                    @Override
+                    public void onPermissionRequest(final PermissionRequest request) {
+                        try {
+                            if (request == null) return;
+                            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                runOnUiThread(() -> request.grant(request.getResources()));
+                            } else {
+                                super.onPermissionRequest(request);
+                            }
+                        } catch (Throwable t) {
+                            super.onPermissionRequest(request);
+                        }
+                    }
+                });
             }
             checkAndRequestPermissions();
         } catch (Throwable t) {
@@ -33,11 +58,22 @@ public class MainActivity extends BridgeActivity {
 
     private void checkAndRequestPermissions() {
         try {
-            // Request Notification permission on Android 13+
+            // Request Notification (Android 13+) and Microphone permissions together.
+            // RECORD_AUDIO is declared in the manifest but, like all dangerous
+            // permissions on Android 6+, it also has to be requested at runtime or
+            // every mic access (Web Speech API triple-tap, etc.) silently fails.
+            java.util.List<String> toRequest = new java.util.ArrayList<>();
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_REQ_CODE);
+                    toRequest.add(Manifest.permission.POST_NOTIFICATIONS);
                 }
+            }
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                toRequest.add(Manifest.permission.RECORD_AUDIO);
+            }
+            if (!toRequest.isEmpty()) {
+                requestPermissions(toRequest.toArray(new String[0]), NOTIF_PERMISSION_REQ_CODE);
             }
 
             // Request Overlay permission

@@ -16,6 +16,10 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -278,6 +282,29 @@ public class FloatingPetService extends Service {
                     super.onReceivedError(view, errorCode, description, failingUrl);
                     if (failingUrl != null && failingUrl.startsWith("file:///android_asset/")) {
                         view.loadUrl("file:///android_asset/public/index.html?mode=overlay");
+                    }
+                }
+            });
+
+            // This raw overlay WebView (unlike the Capacitor bridge WebView in
+            // MainActivity) had no WebChromeClient at all, so triple-tap mic
+            // requests in floating/roam mode were denied by default. Grant the
+            // mic to the page only if the user already approved RECORD_AUDIO at
+            // the OS level (requested from MainActivity when the app is opened);
+            // a background Service cannot itself show the permission dialog.
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                    try {
+                        if (request == null) return;
+                        // WebChromeClient callbacks already run on the UI thread.
+                        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                            request.grant(request.getResources());
+                        } else {
+                            request.deny();
+                        }
+                    } catch (Throwable t) {
+                        try { request.deny(); } catch (Throwable ignored) {}
                     }
                 }
             });
