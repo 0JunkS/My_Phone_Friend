@@ -35,6 +35,10 @@ export class CustomizerEngine {
         this.customPhotoUrl = pref.customPhotoUrl || null;
 
         this.applyCustomization();
+
+        if (window.AndroidPetBridge && window.AndroidPetBridge.syncPetData) {
+          window.AndroidPetBridge.syncPetData(saved);
+        }
       }
     } catch (e) {
       console.warn('Failed to load customizer preferences:', e);
@@ -50,8 +54,13 @@ export class CustomizerEngine {
         scale: this.currentScale,
         customPhotoUrl: this.customPhotoUrl
       };
-      localStorage.setItem(CUSTOM_PREF_KEY, JSON.stringify(pref));
+      const jsonStr = JSON.stringify(pref);
+      localStorage.setItem(CUSTOM_PREF_KEY, jsonStr);
       window.dispatchEvent(new Event('characterUpdated'));
+
+      if (window.AndroidPetBridge && window.AndroidPetBridge.syncPetData) {
+        window.AndroidPetBridge.syncPetData(jsonStr);
+      }
     } catch (e) {
       console.warn('Failed to save customizer preferences:', e);
     }

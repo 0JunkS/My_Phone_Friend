@@ -153,6 +153,22 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public void syncPetData(final String petJsonData) {
+            MainActivity.this.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        android.content.SharedPreferences prefs = getSharedPreferences("MyPetPrefs", MODE_PRIVATE);
+                        prefs.edit().putString("pet_data_json", petJsonData).apply();
+                        FloatingPetService.updatePetDataInOverlay(petJsonData);
+                    } catch (Throwable t) {
+                        t.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void stopOverlay() {
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override

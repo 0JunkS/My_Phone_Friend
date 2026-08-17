@@ -9,8 +9,27 @@ import { AiChatEngine } from './aiChat.js';
 import { CustomizerEngine } from './customizer.js';
 import { FloatingPetEngine } from './floatingPet.js';
 
+window.applySyncedPetData = function(data) {
+  if (!data) return;
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data); } catch(e) {}
+  }
+  try {
+    localStorage.setItem('my_phone_friend_custom_pref_v1', JSON.stringify(data));
+  } catch(e) {}
+  if (window.appInstance && window.appInstance.customizer) {
+    window.appInstance.customizer.currentType = data.type || CHARACTER_TYPES.NANO_BANANA;
+    window.appInstance.customizer.currentAccessory = data.accessory || 'none';
+    window.appInstance.customizer.currentHue = data.hueShift || 0;
+    window.appInstance.customizer.currentScale = data.scale || 1.0;
+    window.appInstance.customizer.customPhotoUrl = data.customPhotoUrl || null;
+    window.appInstance.customizer.applyCustomization();
+  }
+};
+
 class App {
   constructor() {
+    window.appInstance = this;
     this.currentView = 'home';
     this.character = null;
     this.aiChat = null;
