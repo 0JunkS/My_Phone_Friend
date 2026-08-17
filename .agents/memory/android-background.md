@@ -8,3 +8,9 @@ Android 14+ can stop a floating overlay service immediately when it lacks a decl
 **Why:** WebView overlays often appear to work while the activity is open but disappear as soon as the app is backgrounded; the failure can be a platform service policy rejection rather than a JavaScript animation problem.
 
 **How to apply:** Keep service startup in the foreground transition, avoid unconditional `onResume()` shutdowns that race with permission flows, and destroy/recreate the overlay WebView cleanly when the service lifecycle changes.
+
+For an interactive companion, use a small touchable overlay window that the native service moves across the display instead of a full-screen touchable WebView. A full-screen touchable overlay steals scroll/tap events from the app underneath, while a full-screen non-touchable overlay makes the pet impossible to touch.
+
+**Why:** Android dispatches input at the window level; transparent WebView pixels do not create pass-through touch regions.
+
+**How to apply:** Bound the overlay to the pet and speech bubble, move that window natively for whole-screen roaming, and keep the bundled overlay page limited to the character UI.

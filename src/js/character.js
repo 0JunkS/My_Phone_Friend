@@ -46,6 +46,7 @@ export class CharacterController {
     // Spatial & Physics state
     this.x = options.startX || Math.max(50, window.innerWidth / 2 - 55);
     this.y = options.startY || Math.max(100, window.innerHeight - 240);
+    this.minY = options.minY ?? 10;
     this.vx = (Math.random() - 0.5) * 1.5;
     this.vy = 0;
     this.width = 110;
@@ -648,8 +649,8 @@ export class CharacterController {
       this.facingRight = false;
     }
 
-    if (this.y < 10) {
-      this.y = 10;
+    if (this.y < this.minY) {
+      this.y = this.minY;
       this.vy = Math.abs(this.vy) * 0.8;
     } else if (this.y > maxY) {
       this.y = maxY;

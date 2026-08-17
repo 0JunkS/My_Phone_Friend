@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .overlay {
+      position: relative;
+      width: 160px;
+      height: 180px;
+      overflow: visible;
+    }
+    .bubble {
+      position: absolute;
+      top: 5px;
+      left: 80px;
+      z-index: 2;
+      min-width: 128px;
+      max-width: 150px;
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 14px;
+      background: rgba(255,255,255,.94);
+      color: #172033;
+      font: 700 12px/1.25 sans-serif;
+      text-align: center;
+      box-shadow: 0 5px 14px rgba(0,0,0,.22);
+      transform: translateX(-50%);
+    }
+    .bubble::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: rgba(255,255,255,.94);
+    }
+    .pet {
+      position: absolute;
+      left: 25px;
+      top: 55px;
+      width: 110px;
+      height: 120px;
+      animation: bob .65s ease-in-out infinite alternate;
+      filter: drop-shadow(0 5px 5px rgba(0,0,0,.22));
+    }
+    .pet.happy { animation: happy .28s ease-in-out 4; }
+    @keyframes bob { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-5px) rotate(2deg); } }
+    @keyframes happy { 50% { transform: translateY(-12px) scale(1.05); } }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <div id="bubble" class="bubble">곁에 있을게요!</div>
+    <svg id="pet" class="pet" viewBox="0 0 110 120" aria-label="나노바나나 펫" role="img">
+      <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,.18)"/>
+      <g><ellipse cx="40" cy="102" rx="7" ry="7" fill="#facc15"/><ellipse cx="70" cy="102" rx="7" ry="7" fill="#facc15"/></g>
+      <path d="M25 68 C8 45 18 17 38 23 C48 26 53 35 55 44 C57 35 62 26 72 23 C92 17 102 45 85 68 C78 78 68 86 55 86 S32 78 25 68Z" fill="#fde047" stroke="#a16207" stroke-width="2.5"/>
+      <path d="M35 25 Q55 5 75 25 Q61 17 55 27 Q49 17 35 25Z" fill="#fef08a" stroke="#a16207" stroke-width="2"/>
+      <circle cx="43" cy="52" r="4.5" fill="#1e293b"/><circle cx="67" cy="52" r="4.5" fill="#1e293b"/>
+      <circle cx="44.5" cy="50.5" r="1.5" fill="#fff"/><circle cx="68.5" cy="50.5" r="1.5" fill="#fff"/>
+      <path d="M48 64 Q55 70 62 64" stroke="#a16207" stroke-width="2" fill="none"/>
+      <g><path d="M26 63 Q14 67 13 55" stroke="#a16207" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="13" cy="53" r="4.5" fill="#fde047"/></g>
+      <g><path d="M84 63 Q96 67 97 55" stroke="#a16207" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="97" cy="53" r="4.5" fill="#fde047"/></g>
+    </svg>
+  </div>
+  <script>
+    window.petTouched = function () {
+      var bubble = document.getElementById('bubble');
+      var pet = document.getElementById('pet');
+      bubble.textContent = '반가워요!';
+      pet.classList.remove('happy');
+      void pet.offsetWidth;
+      pet.classList.add('happy');
+      window.setTimeout(function () {
+        bubble.textContent = '곁에 있을게요!';
+      }, 2800);
+    };
+  </script>
+</body>
+</html>
