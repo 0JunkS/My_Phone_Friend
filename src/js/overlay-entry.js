@@ -197,11 +197,25 @@ class OverlayMicEngine {
 
     const micEl = document.getElementById('mic-indicator');
 
+    // Request window focus so SpeechRecognition can acquire mic in overlay mode
+    try {
+      if (window.OverlayFocusBridge) window.OverlayFocusBridge.requestFocus();
+    } catch(e) {}
+
     this.isListening = true;
     if (micEl) micEl.classList.add('active');
     this.character.setState(CHARACTER_STATES.HAPPY, 8000);
     this.character.say('말씀하세요! 듣고 있어요 🎙️✨', 3000);
     spawnEmote(document.body, '🎙️', 2);
+
+    const done = () => {
+      this.isListening = false;
+      if (micEl) micEl.classList.remove('active');
+      // Release focus back so overlay doesn't intercept other app touches
+      try {
+        if (window.OverlayFocusBridge) window.OverlayFocusBridge.releaseFocus();
+      } catch(e) {}
+    };
 
     this.recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript.trim();
@@ -209,8 +223,7 @@ class OverlayMicEngine {
     };
 
     this.recognition.onerror = (event) => {
-      this.isListening = false;
-      if (micEl) micEl.classList.remove('active');
+      done();
       const msg = event.error === 'no-speech'
         ? '아무 소리도 안 들렸어요! 다시 눌러서 말해주세요 🎙️'
         : `음성 인식 오류: ${event.error}`;
@@ -218,15 +231,13 @@ class OverlayMicEngine {
     };
 
     this.recognition.onend = () => {
-      this.isListening = false;
-      if (micEl) micEl.classList.remove('active');
+      done();
     };
 
     try {
       this.recognition.start();
     } catch (e) {
-      this.isListening = false;
-      if (micEl) micEl.classList.remove('active');
+      done();
       this.character.say('마이크를 시작할 수 없어요 😢', 3000);
     }
   }

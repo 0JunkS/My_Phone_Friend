@@ -247,6 +247,22 @@
     .character-container[data-state="sad"] .nano-leg-left,
     .character-container[data-state="sad"] .nano-leg-right { animation: nanoSadWalk 1.4s infinite alternate ease-in-out; }
 
+    /* =========================================================
+       EMOTION PARTICLES (Hearts, Tears, Stars, Sweat)
+       ========================================================= */
+    .particle-fx {
+      position: absolute;
+      pointer-events: none;
+      z-index: 10001;
+      will-change: transform, opacity;
+      animation: floatFadeOut 1.2s forwards cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes floatFadeOut {
+      0%   { opacity: 1; transform: translate(0,0) scale(0.6); }
+      50%  { opacity: 0.9; transform: translate(var(--dx,0px), var(--dy,-30px)) scale(1.2); }
+      100% { opacity: 0; transform: translate(var(--dx,0px), calc(var(--dy,-30px) - 25px)) scale(0.8); }
+    }
+
     /* Long press ring */
     .long-press-ring {
       position: absolute;

@@ -18,6 +18,8 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -226,6 +228,53 @@ public class FloatingPetService extends Service {
             webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
             webView.setAlpha(1f);
             floatingLayout.setAlpha(1f);
+
+            // WebChromeClient: grant microphone permission to WebView for SpeechRecognition
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            request.grant(request.getResources());
+                        }
+                    });
+                }
+            });
+
+            // JS interface: allow JS to request/release focus for mic
+            webView.addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void requestFocus() {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (params != null && windowManager != null && isViewAttached && floatingLayout != null) {
+                                    params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                                    windowManager.updateViewLayout(floatingLayout, params);
+                                    webView.requestFocus();
+                                }
+                            } catch (Throwable t) {}
+                        }
+                    });
+                }
+                @android.webkit.JavascriptInterface
+                public void releaseFocus() {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (params != null && windowManager != null && isViewAttached && floatingLayout != null) {
+                                    params.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                                    windowManager.updateViewLayout(floatingLayout, params);
+                                }
+                            } catch (Throwable t) {}
+                        }
+                    });
+                }
+            }, "OverlayFocusBridge");
+
             webView.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
@@ -263,19 +312,27 @@ public class FloatingPetService extends Service {
                     FrameLayout.LayoutParams.MATCH_PARENT
             ));
 
-            // Native Touch & Drag listener with strict screen wall boundary clamping
+            // Native Touch & Drag listener with triple-tap detection
+            // Touch events are dispatched to the WebView so character.js internal
+            // triple-tap detection works (pointerdown/pointerup sequence)
             webView.setOnTouchListener(new View.OnTouchListener() {
                 private int initialX, initialY;
                 private float initialTouchX, initialTouchY;
                 private long touchStartTime;
+                private boolean movedBeyondThreshold = false;
 
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
                     if (params == null || windowManager == null || !isViewAttached) return false;
 
+                    // Always forward touch events to the WebView so character.js
+                    // receives the pointer events and handles triple-tap internally
+                    webView.dispatchTouchEvent(event);
+
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
                             isTouching = true;
+                            movedBeyondThreshold = false;
                             touchStartTime = System.currentTimeMillis();
                             initialX = params.x;
                             initialY = params.y;
@@ -284,40 +341,39 @@ public class FloatingPetService extends Service {
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
-                            int rawX = initialX + (int) (event.getRawX() - initialTouchX);
-                            int rawY = initialY + (int) (event.getRawY() - initialTouchY);
+                            float moveDiffX = Math.abs(event.getRawX() - initialTouchX);
+                            float moveDiffY = Math.abs(event.getRawY() - initialTouchY);
 
-                            android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
-                            int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
-                            int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
+                            // Only start dragging window after significant movement
+                            if (moveDiffX > 15 || moveDiffY > 15) {
+                                movedBeyondThreshold = true;
+                            }
 
-                            // Clamp position so character and speech bubble never cross screen edges or soft keyboard
-                            params.x = Math.max(0, Math.min(rawX, maxAllowedX));
-                            params.y = Math.max(0, Math.min(rawY, maxAllowedY));
+                            if (movedBeyondThreshold) {
+                                int rawX = initialX + (int) (event.getRawX() - initialTouchX);
+                                int rawY = initialY + (int) (event.getRawY() - initialTouchY);
 
-                            try {
-                                if (isViewAttached && floatingLayout != null) {
-                                    windowManager.updateViewLayout(floatingLayout, params);
-                                }
-                            } catch (Throwable t) {}
+                                android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
+                                int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
+                                int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
+
+                                params.x = Math.max(0, Math.min(rawX, maxAllowedX));
+                                params.y = Math.max(0, Math.min(rawY, maxAllowedY));
+
+                                try {
+                                    if (isViewAttached && floatingLayout != null) {
+                                        windowManager.updateViewLayout(floatingLayout, params);
+                                    }
+                                } catch (Throwable t) {}
+                            }
                             return true;
 
                         case MotionEvent.ACTION_UP:
-                            long duration = System.currentTimeMillis() - touchStartTime;
-                            float diffX = Math.abs(event.getRawX() - initialTouchX);
-                            float diffY = Math.abs(event.getRawY() - initialTouchY);
-
-                            if (duration < 350 && diffX < 15 && diffY < 15) {
-                                webView.evaluateJavascript(
-                                        "window.petTouched && window.petTouched();",
-                                        null
-                                );
-                            }
                             isTouching = false;
                             return true;
                     }
-                        isTouching = false;
-                        return false;
+                    isTouching = false;
+                    return false;
                 }
             });
 

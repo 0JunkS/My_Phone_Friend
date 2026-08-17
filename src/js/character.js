@@ -765,7 +765,20 @@ export class CharacterController {
 
     const facingScale = this.facingRight ? 1 : -1;
     this.bodyWrapper.style.setProperty('--char-facing', facingScale);
-    this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
+    // Do NOT set bodyWrapper.style.transform here — CSS keyframe animations apply
+    // their own transform on .character-body-wrapper. Setting an inline transform
+    // overrides those animations. Instead the CSS animations use var(--char-facing)
+    // directly in the keyframe transform definitions.
+    // Only apply facing via CSS variable; the default (idle) facing is handled by CSS:
+    if (this.state === CHARACTER_STATES.WALK ||
+        this.state === CHARACTER_STATES.LIFTED ||
+        this.state === CHARACTER_STATES.HAPPY ||
+        this.state === CHARACTER_STATES.SAD) {
+      // State has CSS animation — don't touch transform, CSS handles it
+      this.bodyWrapper.style.transform = '';
+    } else {
+      this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
+    }
   }
 
   updateCustomization({ type, customPhotoUrl, accessory, hueShift, scale, showLimbs }) {
