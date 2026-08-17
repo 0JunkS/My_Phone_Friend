@@ -39,6 +39,15 @@ export class CharacterController {
     this.scale = options.scale || 1.0;
     this.showLimbs = options.showLimbs !== false; // toggle arms/legs on custom photo
 
+    // When true, this controller is running inside the native Android
+    // always-on-top overlay window (FloatingPetService). In that mode the
+    // OS WindowManager already drags/wanders the whole small overlay window
+    // around the screen, so this controller must NOT also translate the
+    // character's left/top inside that window — doing both at once caused
+    // the lifted/drag motion to look broken (double movement + clipping
+    // against the tiny overlay window's edges).
+    this.staticPosition = options.staticPosition === true;
+
     // Affection & Care Engine
     this.affection = 70; // 0 to 100
     this.lastCareTime = Date.now();
@@ -602,11 +611,13 @@ export class CharacterController {
       this.lastPointerX = coords.x;
       this.lastPointerY = coords.y;
 
-      this.x = coords.x - this.dragStartX;
-      this.y = coords.y - this.dragStartY;
+      if (!this.staticPosition) {
+        this.x = coords.x - this.dragStartX;
+        this.y = coords.y - this.dragStartY;
 
-      this.constrainBounds();
-      this.updateTransform();
+        this.constrainBounds();
+        this.updateTransform();
+      }
     };
 
     const handleEnd = (e) => {
@@ -649,8 +660,10 @@ export class CharacterController {
           // Released after dragging (Stays where dropped)
           sound.playDrop();
           this.petCare(5);
-          this.vx = Math.max(-6, Math.min(6, this.pointerVx));
-          this.vy = Math.max(-6, Math.min(6, this.pointerVy));
+          if (!this.staticPosition) {
+            this.vx = Math.max(-6, Math.min(6, this.pointerVx));
+            this.vy = Math.max(-6, Math.min(6, this.pointerVy));
+          }
           this.setState(CHARACTER_STATES.WALK);
         }
       } else {
@@ -709,6 +722,12 @@ export class CharacterController {
   }
 
   startPhysicsLoop() {
+    // In native-overlay mode the whole floating window is already wandered
+    // and dragged by FloatingPetService (WindowManager), so the character
+    // must stay put inside its own window instead of also roaming — running
+    // both at once caused the visible jump/clip when lifted.
+    if (this.staticPosition) return;
+
     let lastTime = performance.now();
     let wanderTimer = 0;
 
@@ -757,8 +776,10 @@ export class CharacterController {
     this.el.style.setProperty('--char-scale', scaleFactor);
     this.el.style.width = `${w}px`;
     this.el.style.height = `${h}px`;
-    this.el.style.left = `${this.x || 0}px`;
-    this.el.style.top = `${this.y || 0}px`;
+    if (!this.staticPosition) {
+      this.el.style.left = `${this.x || 0}px`;
+      this.el.style.top = `${this.y || 0}px`;
+    }
     this.el.style.display = 'block';
     this.el.style.visibility = 'visible';
     this.el.style.opacity = '1';

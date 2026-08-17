@@ -16,23 +16,6 @@ export class FloatingPetEngine {
     this.pipCanvas = document.getElementById('pip-canvas');
     this.pipCtx = this.pipCanvas ? this.pipCanvas.getContext('2d') : null;
     this.animFrameId = null;
-    // Store a reference to the character controller inside PiP so we can reuse it instead of recreating on each toggle when the page becomes hidden/shown
-    this.pipChar = null;
-    // Bind visibility change to keep state consistent when the tab is hidden/shown
-    // Instead of automatically reopening the floating pet (which can cause duplicate characters),
-    // we simply pause any ongoing canvas animation and retain the current floating state.
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        // Pause canvas animation if active
-        this.stopCanvasAnimation();
-      } else {
-        // Resume canvas animation if floating via video PiP
-        if (this.isFloating && this.pipVideo) {
-          this.startCanvasAnimation();
-        }
-        // Do not auto-reopen the floating pet; user can toggle manually.
-      }
-    });
   }
 
   /**
@@ -105,32 +88,27 @@ export class FloatingPetEngine {
         pipContainer.style.background = 'transparent';
         pipBody.appendChild(pipContainer);
 
-        if (!this.pipChar) {
-          this.pipChar = new CharacterController(pipContainer, {
-            type: this.app.character.type,
-            accessory: this.app.character.accessory,
-            hueShift: this.app.character.hueShift,
-            customPhotoUrl: this.app.character.customPhotoUrl,
-            startX: 25,
-            startY: 20,
-            onTripleTap: () => {
-              this.app.openChatWithMic();
-              window.focus();
-            },
-            onTap: () => {
-              sound.playTap();
-              this.pipChar.petCare(15);
-              this.pipChar.say('집사님 함께해요! 🍌✨', 2500);
-            }
-          });
-        }
-        const pipChar = this.pipChar;
+        const pipChar = new CharacterController(pipContainer, {
+          type: this.app.character.type,
+          accessory: this.app.character.accessory,
+          hueShift: this.app.character.hueShift,
+          customPhotoUrl: this.app.character.customPhotoUrl,
+          startX: 25,
+          startY: 20,
+          onTripleTap: () => {
+            this.app.openChatWithMic();
+            window.focus();
+          },
+          onTap: () => {
+            sound.playTap();
+            pipChar.petCare(15);
+            pipChar.say('집사님 함께해요! 🍌✨', 2500);
+          }
+        });
 
         this.pipWindow.addEventListener('pagehide', () => {
           this.isFloating = false;
           this.pipWindow = null;
-          // Clean up the stored character when the PiP window is truly closed
-          this.pipChar = null;
           this.updateUiState(false);
         });
 
@@ -195,17 +173,15 @@ export class FloatingPetEngine {
       window.AndroidPetBridge.stopOverlay();
     }
     if (this.pipWindow) {
-        try { this.pipWindow.close(); } catch (e) {}
-        this.pipWindow = null;
-        // Also clear the character controller reference
-        this.pipChar = null;
-      }
-      if (document.pictureInPictureElement) {
-        try { document.exitPictureInPicture(); } catch (e) {}
-      }
-      this.stopCanvasAnimation();
-      this.isFloating = false;
-      this.updateUiState(false);
+      try { this.pipWindow.close(); } catch (e) {}
+      this.pipWindow = null;
+    }
+    if (document.pictureInPictureElement) {
+      try { document.exitPictureInPicture(); } catch (e) {}
+    }
+    this.stopCanvasAnimation();
+    this.isFloating = false;
+    this.updateUiState(false);
   }
 
   startCanvasAnimation() {

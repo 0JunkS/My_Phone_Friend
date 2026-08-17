@@ -290,6 +290,10 @@ class OverlayApp {
 
     this.character = new CharacterController(container, {
       type: CHARACTER_TYPES.NANO_BANANA,
+      // The native FloatingPetService already drags/wanders the whole
+      // overlay window around the screen, so the character must stay fixed
+      // inside its own small window rather than also positioning itself.
+      staticPosition: true,
       onTap: () => {
         // Single tap: random affection emote
         const taps = ['반가워요! 🍌✨', '헤헤! 간지러워요! 😄', '꼭 안아줘요! 💛', '오늘도 화이팅! 🎉'];
