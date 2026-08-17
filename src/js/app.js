@@ -493,9 +493,36 @@ class App {
     const photoUploadInput = document.getElementById('photo-upload-input');
     const btnRemovePhoto = document.getElementById('btn-remove-photo');
     const currentPetName = document.getElementById('current-pet-name');
+    const limbsToggleRow = document.getElementById('limbs-toggle-row');
+    const limbsCheckbox = document.getElementById('limbs-toggle-checkbox');
+    const limbsTrack = document.getElementById('limbs-toggle-track');
+    const limbsThumb = document.getElementById('limbs-toggle-thumb');
 
+    // Helper to update toggle visual state
+    const updateLimbsToggleUI = (checked) => {
+      if (!limbsTrack || !limbsThumb) return;
+      limbsTrack.style.background = checked ? 'var(--accent-primary, #a78bfa)' : 'rgba(255,255,255,0.2)';
+      limbsThumb.style.left = checked ? '22px' : '3px';
+    };
+
+    // Show/hide and sync limbs toggle row with current state
+    const showLimbsToggle = (show) => {
+      if (limbsToggleRow) {
+        limbsToggleRow.style.display = show ? 'flex' : 'none';
+      }
+      if (show && limbsCheckbox) {
+        const current = this.customizer ? this.customizer.showLimbs : true;
+        limbsCheckbox.checked = current;
+        updateLimbsToggleUI(current);
+      }
+    };
+
+    // Check if custom photo is already loaded on open
     btnOpenCloset.addEventListener('click', () => {
       this.openModal('modal-closet');
+      const isCustom = this.customizer && this.customizer.currentType === 'custom_photo';
+      if (isCustom && btnRemovePhoto) btnRemovePhoto.style.display = 'block';
+      showLimbsToggle(isCustom);
     });
 
     const names = {
@@ -513,6 +540,7 @@ class App {
         const type = item.getAttribute('data-type');
         this.customizer.setCharacterType(type);
         if (currentPetName) currentPetName.textContent = names[type] || '내 폰 안의 친구';
+        showLimbsToggle(false);
       });
     });
 
@@ -564,13 +592,32 @@ class App {
       } else {
         if (btnRemovePhoto) btnRemovePhoto.style.display = 'block';
         if (currentPetName) currentPetName.textContent = '내 사진 캐릭터';
+        showLimbsToggle(true);
         this.closeModal('modal-closet');
       }
     });
 
+    // Limbs toggle click
+    if (limbsCheckbox) {
+      limbsCheckbox.addEventListener('change', () => {
+        updateLimbsToggleUI(limbsCheckbox.checked);
+        this.customizer.setShowLimbs(limbsCheckbox.checked);
+      });
+    }
+    // Clicking the track/thumb also toggles
+    if (limbsTrack) {
+      limbsTrack.addEventListener('click', () => {
+        if (limbsCheckbox) {
+          limbsCheckbox.checked = !limbsCheckbox.checked;
+          limbsCheckbox.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
     btnRemovePhoto.addEventListener('click', () => {
       this.customizer.removeCustomPhoto();
       btnRemovePhoto.style.display = 'none';
+      showLimbsToggle(false);
       if (currentPetName) currentPetName.textContent = '나노바나나';
       characterItems.forEach(c => {
         if (c.getAttribute('data-type') === 'nano_banana') c.classList.add('active');

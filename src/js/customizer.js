@@ -17,8 +17,8 @@ export class CustomizerEngine {
     this.currentAccessory = 'none';
     this.currentHue = 0;
     this.customPhotoUrl = null;
-
     this.currentScale = 1.0;
+    this.showLimbs = true; // on/off for custom photo arms & legs
 
     this.loadPreferences();
   }
@@ -33,6 +33,7 @@ export class CustomizerEngine {
         this.currentHue = pref.hueShift || 0;
         this.currentScale = pref.scale || 1.0;
         this.customPhotoUrl = pref.customPhotoUrl || null;
+        this.showLimbs = pref.showLimbs !== false; // default true
 
         this.applyCustomization();
 
@@ -52,7 +53,8 @@ export class CustomizerEngine {
         accessory: this.currentAccessory,
         hueShift: this.currentHue,
         scale: this.currentScale,
-        customPhotoUrl: this.customPhotoUrl
+        customPhotoUrl: this.customPhotoUrl,
+        showLimbs: this.showLimbs
       };
       const jsonStr = JSON.stringify(pref);
       localStorage.setItem(CUSTOM_PREF_KEY, jsonStr);
@@ -72,7 +74,8 @@ export class CustomizerEngine {
       accessory: this.currentAccessory,
       hueShift: this.currentHue,
       scale: this.currentScale,
-      customPhotoUrl: this.customPhotoUrl
+      customPhotoUrl: this.customPhotoUrl,
+      showLimbs: this.showLimbs
     });
   }
 
@@ -100,6 +103,12 @@ export class CustomizerEngine {
 
   setScale(scaleValue) {
     this.currentScale = parseFloat(scaleValue) || 1.0;
+    this.applyCustomization();
+    this.savePreferences();
+  }
+
+  setShowLimbs(visible) {
+    this.showLimbs = !!visible;
     this.applyCustomization();
     this.savePreferences();
   }

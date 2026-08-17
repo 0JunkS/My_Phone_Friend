@@ -37,6 +37,7 @@ export class CharacterController {
     this.accessory = options.accessory || 'none';
     this.hueShift = options.hueShift || 0;
     this.scale = options.scale || 1.0;
+    this.showLimbs = options.showLimbs !== false; // toggle arms/legs on custom photo
 
     // Affection & Care Engine
     this.affection = 70; // 0 to 100
@@ -296,15 +297,17 @@ export class CharacterController {
         </defs>
         <ellipse cx="55" cy="112" rx="28" ry="6" fill="rgba(0,0,0,0.22)" />
         
+        ${this.showLimbs ? `
         <g class="nano-leg-left" style="transform-origin: 40px 96px;"><ellipse cx="40" cy="102" rx="7" ry="7" fill="#64748b" /></g>
-        <g class="nano-leg-right" style="transform-origin: 70px 96px;"><ellipse cx="70" cy="102" rx="7" ry="7" fill="#64748b" /></g>
+        <g class="nano-leg-right" style="transform-origin: 70px 96px;"><ellipse cx="70" cy="102" rx="7" ry="7" fill="#64748b" /></g>` : ''}
         
         <g filter="url(#photoShadow)">
           <image href="${this.customPhotoUrl}" x="17" y="17" width="76" height="76" clip-path="url(#customPhotoClip)" preserveAspectRatio="xMidYMid slice" />
         </g>
 
+        ${this.showLimbs ? `
         <g class="nano-arm-left" style="transform-origin: 18px 65px;"><circle cx="16" cy="65" r="6" fill="#64748b" /></g>
-        <g class="nano-arm-right" style="transform-origin: 92px 65px;"><circle cx="94" cy="65" r="6" fill="#64748b" /></g>
+        <g class="nano-arm-right" style="transform-origin: 92px 65px;"><circle cx="94" cy="65" r="6" fill="#64748b" /></g>` : ''}
         
         ${accessorySvg}
       </svg>
@@ -765,11 +768,12 @@ export class CharacterController {
     this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
   }
 
-  updateCustomization({ type, customPhotoUrl, accessory, hueShift, scale }) {
+  updateCustomization({ type, customPhotoUrl, accessory, hueShift, scale, showLimbs }) {
     if (type !== undefined) this.type = type;
     if (customPhotoUrl !== undefined) this.customPhotoUrl = customPhotoUrl;
     if (accessory !== undefined) this.accessory = accessory;
     if (hueShift !== undefined) this.hueShift = hueShift;
+    if (showLimbs !== undefined) this.showLimbs = showLimbs;
     if (scale !== undefined) {
       this.scale = scale;
       this.width = Math.round((this.baseWidth || 110) * this.scale);
