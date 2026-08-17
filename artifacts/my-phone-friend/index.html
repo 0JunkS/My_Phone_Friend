@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>내 폰 안의 친구 - MY PHONE FRIEND</title>
   <meta name="description" content="화면을 자유롭게 돌아다니며 AI 음성 대화와 3일 기억 시스템을 제공하는 내 손안의 펫 친구 앱" />
+  
+  <script>
+    (function() {
+      if (location.search.indexOf('mode=overlay') !== -1 || location.href.indexOf('mode=overlay') !== -1 || window.isOverlayMode) {
+        document.documentElement.classList.add('mode-overlay');
+      }
+    })();
+  </script>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   
    <!-- Soft editorial typography -->

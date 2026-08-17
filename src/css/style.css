@@ -450,37 +450,62 @@ html, body {
 }
 
 /* Background Overlay Mode (Android Floating Pet Window) */
+html.mode-overlay,
 body.mode-overlay {
   background: transparent !important;
   background-color: transparent !important;
   overflow: hidden !important;
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  overscroll-behavior: none !important;
 }
 
+html.mode-overlay > *:not(#global-character-layer),
 body.mode-overlay > *:not(#global-character-layer) {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
   pointer-events: none !important;
 }
 
+html.mode-overlay #app,
 body.mode-overlay #app,
+html.mode-overlay #home-view,
 body.mode-overlay #home-view,
+html.mode-overlay #companion-view,
 body.mode-overlay #companion-view,
+html.mode-overlay .ambient-glow,
 body.mode-overlay .ambient-glow,
+html.mode-overlay .ambient-background,
 body.mode-overlay .ambient-background,
+html.mode-overlay .glow-orb,
 body.mode-overlay .glow-orb,
+html.mode-overlay .modal,
 body.mode-overlay .modal,
+html.mode-overlay .modal-backdrop,
 body.mode-overlay .modal-backdrop,
+html.mode-overlay #radial-menu,
 body.mode-overlay #radial-menu,
+html.mode-overlay header,
 body.mode-overlay header,
+html.mode-overlay footer,
 body.mode-overlay footer,
+html.mode-overlay button,
 body.mode-overlay button {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
   pointer-events: none !important;
 }
 
+html.mode-overlay #global-character-layer,
 body.mode-overlay #global-character-layer {
   position: fixed;
   inset: 0;
@@ -492,8 +517,11 @@ body.mode-overlay #global-character-layer {
   align-items: center !important;
   justify-content: center !important;
   z-index: 999999;
+  overflow: hidden !important;
+  touch-action: none !important;
 }
 
+html.mode-overlay .character-container,
 body.mode-overlay .character-container {
   position: relative !important;
   top: auto !important;
@@ -501,6 +529,7 @@ body.mode-overlay .character-container {
   transform: scale(0.95) !important;
   margin: auto !important;
   pointer-events: auto !important;
+  touch-action: none !important;
 }
 
 /* ==========================================================================

@@ -154,6 +154,10 @@ public class FloatingPetService extends Service {
 
             // Transparent WebView rendering character & speech bubble
             webView = new WebView(this);
+            webView.setVerticalScrollBarEnabled(false);
+            webView.setHorizontalScrollBarEnabled(false);
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
@@ -166,6 +170,18 @@ public class FloatingPetService extends Service {
             webView.setBackgroundColor(Color.TRANSPARENT);
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                    super.onPageStarted(view, url, favicon);
+                    view.evaluateJavascript("document.documentElement.classList.add('mode-overlay'); document.body.classList.add('mode-overlay');", null);
+                }
+
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    view.evaluateJavascript("document.documentElement.classList.add('mode-overlay'); document.body.classList.add('mode-overlay');", null);
+                }
+
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     super.onReceivedError(view, errorCode, description, failingUrl);
@@ -264,8 +280,8 @@ public class FloatingPetService extends Service {
                         int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
                         int maxAllowedY = Math.max(0, currentMetrics.heightPixels - params.height);
 
-                        int deltaX = (int) ((Math.random() - 0.5) * 40);
-                        int deltaY = (int) ((Math.random() - 0.5) * 30);
+                        int deltaX = (int) ((Math.random() - 0.5) * 80);
+                        int deltaY = (int) ((Math.random() - 0.5) * 60);
 
                         params.x = Math.max(0, Math.min(params.x + deltaX, maxAllowedX));
                         params.y = Math.max(0, Math.min(params.y + deltaY, maxAllowedY));
@@ -273,11 +289,11 @@ public class FloatingPetService extends Service {
                     }
                 } catch (Throwable t) {}
                 if (wanderHandler != null && isViewAttached) {
-                    wanderHandler.postDelayed(this, 3500);
+                    wanderHandler.postDelayed(this, 2500);
                 }
             }
         };
-        wanderHandler.postDelayed(wanderRunnable, 3500);
+        wanderHandler.postDelayed(wanderRunnable, 2500);
     }
 
     private int dpToPx(int dp) {
