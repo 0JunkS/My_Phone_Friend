@@ -142,6 +142,17 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public void moveToBackground() {
+            MainActivity.this.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    startFloatingPetService();
+                    moveTaskToBack(true);
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void stopOverlay() {
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override

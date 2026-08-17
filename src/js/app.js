@@ -85,13 +85,30 @@ class App {
     const btnEnterCompanion = document.getElementById('btn-enter-companion');
     const btnCompanionBackHome = document.getElementById('btn-companion-back-home');
 
-    const switchToCompanion = () => {
-      this.currentView = 'companion';
-      homeView.classList.add('hidden');
-      companionView.classList.remove('hidden');
+    const switchToCompanion = async () => {
       sound.playHappy();
       this.character.petCare(10);
       this.character.say('화면 배회 모드 시작! 🍌✨', 3000);
+
+      // 1. Android APK Native Bridge: Start overlay service and move app immediately to phone background
+      if (window.AndroidPetBridge) {
+        if (!window.AndroidPetBridge.isOverlayGranted()) {
+          window.AndroidPetBridge.requestPermission();
+          alert('스마트폰 화면 위에 펫을 띄우려면 [다른 앱 위에 표시] 권한을 허용해주세요! 🍌');
+          return;
+        }
+        window.AndroidPetBridge.moveToBackground();
+        return;
+      }
+
+      // 2. Desktop/Web fallback: Launch picture-in-picture or companion view
+      if ('documentPictureInPicture' in window || document.pictureInPictureEnabled) {
+        await this.floatingPet.openFloatingPet();
+      } else {
+        this.currentView = 'companion';
+        homeView.classList.add('hidden');
+        companionView.classList.remove('hidden');
+      }
     };
 
     const switchToHome = () => {
