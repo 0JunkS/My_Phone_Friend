@@ -461,7 +461,12 @@ body.mode-overlay {
   overscroll-behavior: none !important;
 }
 
-html.mode-overlay > *:not(#global-character-layer),
+/* NOTE: only body's direct children are targeted here — #global-character-layer
+   lives inside <body>, not <html>, so a matching html.mode-overlay > * rule
+   would match <body> itself (since body isn't #global-character-layer) and
+   hide the whole page, taking #global-character-layer down with it since a
+   display:none ancestor can never be overridden by a descendant's own
+   display value. */
 body.mode-overlay > *:not(#global-character-layer) {
   display: none !important;
   opacity: 0 !important;
