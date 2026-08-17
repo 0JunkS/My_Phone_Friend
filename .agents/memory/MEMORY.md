@@ -1,1 +1,0 @@
-- [Android background overlays](android-background.md) — Android 14 floating companions need an explicitly typed foreground service and careful activity lifecycle handling.
