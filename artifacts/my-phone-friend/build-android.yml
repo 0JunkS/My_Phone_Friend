@@ -56,6 +56,15 @@ jobs:
           fi
           npx cap sync android
 
+      - name: Verify Android asset URLs
+        run: |
+          test -f android/app/src/main/assets/public/pet-overlay.html
+          test -f android/app/src/main/assets/public/assets/overlay-*.js
+          if grep -R -nE 'src="/assets|href="/assets' android/app/src/main/assets/public; then
+            echo "Android assets must use relative URLs when loaded from file:///android_asset."
+            exit 1
+          fi
+
       - name: Build Android Debug APK
         run: |
           cd android

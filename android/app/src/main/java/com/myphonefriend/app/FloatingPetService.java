@@ -218,8 +218,14 @@ public class FloatingPetService extends Service {
             settings.setAllowUniversalAccessFromFileURLs(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
 
+            // Transparent WebViews inside TYPE_APPLICATION_OVERLAY windows can
+            // lose their SVG layer on some Android GPU implementations. The
+            // software layer keeps the window transparent while compositing
+            // the character reliably above other apps.
             webView.setBackgroundColor(Color.TRANSPARENT);
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            webView.setAlpha(1f);
+            floatingLayout.setAlpha(1f);
             webView.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {

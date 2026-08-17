@@ -14,3 +14,16 @@ For an interactive companion, use a small touchable overlay window that the nati
 **Why:** Android dispatches input at the window level; transparent WebView pixels do not create pass-through touch regions.
 
 **How to apply:** Bound the overlay to the pet and speech bubble, move that window natively for whole-screen roaming, and keep the bundled overlay page limited to the character UI.
+
+Android WebView pages loaded from `file:///android_asset/` must use relative
+script, modulepreload, and stylesheet URLs; root-relative `/assets/...` URLs
+resolve outside the APK asset directory and can leave a transparent overlay
+with no rendered character.
+
+**Why:** The WebView can successfully create the transparent overlay window
+while silently failing to load the character bundle from the wrong `file://`
+location.
+
+**How to apply:** Keep Capacitor/Vite output relative for the Android bundle
+and add a build-time check that rejects root-relative asset URLs after
+`cap sync`.

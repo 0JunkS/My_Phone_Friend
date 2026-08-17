@@ -152,7 +152,7 @@ export class CharacterController {
     }
 
     return `
-      <svg viewBox="0 0 110 120" width="110" height="120" style="filter: hue-rotate(${this.hueShift}deg);">
+      <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <defs>
           <linearGradient id="bananaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#fef08a" />
@@ -218,7 +218,7 @@ export class CharacterController {
     let mouth = this.state === CHARACTER_STATES.SAD ? `M48 64 Q55 60 62 64` :
                 this.state === CHARACTER_STATES.HAPPY ? `M46 58 Q55 70 64 58 Z` : `M50 60 Q55 65 60 60`;
     return `
-      <svg viewBox="0 0 110 120" width="110" height="120" style="filter: hue-rotate(${this.hueShift}deg);">
+      <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,0.18)" />
         <g class="nano-leg-left" style="transform-origin: 40px 96px;"><ellipse cx="40" cy="102" rx="7" ry="7" fill="#f43f5e" /></g>
         <g class="nano-leg-right" style="transform-origin: 70px 96px;"><ellipse cx="70" cy="102" rx="7" ry="7" fill="#f43f5e" /></g>
@@ -244,7 +244,7 @@ export class CharacterController {
 
   renderCloudPuppySvg(accessorySvg) {
     return `
-      <svg viewBox="0 0 110 120" width="110" height="120" style="filter: hue-rotate(${this.hueShift}deg);">
+      <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,0.18)" />
         <g class="nano-leg-left" style="transform-origin: 40px 96px;"><ellipse cx="40" cy="102" rx="7" ry="7" fill="#60a5fa" /></g>
         <g class="nano-leg-right" style="transform-origin: 70px 96px;"><ellipse cx="70" cy="102" rx="7" ry="7" fill="#60a5fa" /></g>
@@ -265,7 +265,7 @@ export class CharacterController {
 
   renderChocoDinoSvg(accessorySvg) {
     return `
-      <svg viewBox="0 0 110 120" width="110" height="120" style="filter: hue-rotate(${this.hueShift}deg);">
+      <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,0.18)" />
         <g class="nano-leg-left" style="transform-origin: 40px 96px;"><ellipse cx="40" cy="102" rx="8" ry="7" fill="#10b981" /></g>
         <g class="nano-leg-right" style="transform-origin: 70px 96px;"><ellipse cx="70" cy="102" rx="8" ry="7" fill="#10b981" /></g>
@@ -285,7 +285,7 @@ export class CharacterController {
 
   renderCustomPhotoSvg(accessorySvg) {
     return `
-      <svg viewBox="0 0 110 120" width="110" height="120">
+      <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;">
         <defs>
           <clipPath id="customPhotoClip">
             <circle cx="55" cy="55" r="38" />
@@ -747,25 +747,22 @@ export class CharacterController {
    * Keeps speech bubble upright without being mirrored!
    */
   updateTransform() {
-    const scaleFactor = this.scale || 1.0;
+    const scaleFactor = Math.max(0.5, this.scale || 1.0);
+    const w = Math.max(60, this.width || Math.round(110 * scaleFactor));
+    const h = Math.max(60, this.height || Math.round(120 * scaleFactor));
+
     this.el.style.setProperty('--char-scale', scaleFactor);
-    this.el.style.width = `${this.width}px`;
-    this.el.style.height = `${this.height}px`;
+    this.el.style.width = `${w}px`;
+    this.el.style.height = `${h}px`;
+    this.el.style.left = `${this.x || 0}px`;
+    this.el.style.top = `${this.y || 0}px`;
+    this.el.style.display = 'block';
+    this.el.style.visibility = 'visible';
+    this.el.style.opacity = '1';
 
-    if (document.body.classList.contains('mode-overlay')) {
-      this.el.style.left = '15px';
-      this.el.style.top = '25px';
-      const facingScale = this.facingRight ? scaleFactor : -scaleFactor;
-      this.bodyWrapper.style.setProperty('--char-facing', facingScale);
-      this.bodyWrapper.style.transform = `scaleX(${facingScale}) scaleY(${scaleFactor})`;
-      return;
-    }
-
-    this.el.style.left = `${this.x}px`;
-    this.el.style.top = `${this.y}px`;
-    const facingScale = this.facingRight ? scaleFactor : -scaleFactor;
+    const facingScale = this.facingRight ? 1 : -1;
     this.bodyWrapper.style.setProperty('--char-facing', facingScale);
-    this.bodyWrapper.style.transform = `scaleX(${facingScale}) scaleY(${scaleFactor})`;
+    this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
   }
 
   updateCustomization({ type, customPhotoUrl, accessory, hueShift, scale }) {

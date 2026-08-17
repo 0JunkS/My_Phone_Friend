@@ -28,7 +28,10 @@ if (!basePath) {
 }
 
 export default defineConfig({
-  base: basePath,
+  // Relative URLs are required when Capacitor loads the compiled page from
+  // file:///android_asset/public. They also work correctly at the root preview
+  // path, so the same bundle can be used by the web preview and Android.
+  base: './',
   plugins: [
     react(),
     tailwindcss(),

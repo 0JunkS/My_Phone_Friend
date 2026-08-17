@@ -181,8 +181,13 @@ public class FloatingPetService extends Service {
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setDatabaseEnabled(true);
 
+            // A transparent WebView in a TYPE_APPLICATION_OVERLAY window can
+            // lose its SVG layer on some Android GPU implementations. The
+            // software layer keeps the page transparent while compositing the
+            // character reliably above other apps.
             webView.setBackgroundColor(Color.TRANSPARENT);
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
             webView.setWebViewClient(new WebViewClient() {
                 @Override
@@ -191,8 +196,11 @@ public class FloatingPetService extends Service {
                 }
             });
 
-            // Load local android asset bundle offline
-            webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
+            // Use the dedicated, UI-free overlay entry point. Loading the
+            // dashboard entry point here hid the app shell but still depended
+            // on the dashboard bundle and could leave a transparent window
+            // when Android resolved its asset URLs from file://.
+            webView.loadUrl("file:///android_asset/public/pet-overlay.html?mode=overlay");
 
             floatingLayout.addView(webView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
