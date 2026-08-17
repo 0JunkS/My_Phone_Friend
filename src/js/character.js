@@ -50,8 +50,10 @@ export class CharacterController {
     this.minY = options.minY ?? 10;
     this.vx = (Math.random() - 0.5) * 1.5;
     this.vy = 0;
-    this.width = 110;
-    this.height = 120;
+    this.baseWidth = 110;
+    this.baseHeight = 120;
+    this.width = Math.round(this.baseWidth * this.scale);
+    this.height = Math.round(this.baseHeight * this.scale);
     this.facingRight = true;
 
     // Interaction & Tap State
@@ -746,6 +748,10 @@ export class CharacterController {
    */
   updateTransform() {
     const scaleFactor = this.scale || 1.0;
+    this.el.style.setProperty('--char-scale', scaleFactor);
+    this.el.style.width = `${this.width}px`;
+    this.el.style.height = `${this.height}px`;
+
     if (document.body.classList.contains('mode-overlay')) {
       this.el.style.left = '15px';
       this.el.style.top = '25px';
@@ -767,7 +773,11 @@ export class CharacterController {
     if (customPhotoUrl !== undefined) this.customPhotoUrl = customPhotoUrl;
     if (accessory !== undefined) this.accessory = accessory;
     if (hueShift !== undefined) this.hueShift = hueShift;
-    if (scale !== undefined) this.scale = scale;
+    if (scale !== undefined) {
+      this.scale = scale;
+      this.width = Math.round((this.baseWidth || 110) * this.scale);
+      this.height = Math.round((this.baseHeight || 120) * this.scale);
+    }
     this.renderVisuals();
   }
 }

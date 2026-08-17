@@ -41,13 +41,34 @@ public class FloatingPetService extends Service {
     private static final int NOTIFICATION_ID = 1001;
 
     public static void updatePetDataInOverlay(final String petJsonData) {
-        if (activeInstance != null && activeInstance.webView != null) {
-            final String safeJson = petJsonData != null ? petJsonData : "{}";
-            activeInstance.webView.post(new Runnable() {
+        if (activeInstance != null) {
+            activeInstance.applyScaleAndData(petJsonData);
+        }
+    }
+
+    private void applyScaleAndData(final String petJsonData) {
+        final String safeJson = petJsonData != null ? petJsonData : "{}";
+        try {
+            org.json.JSONObject obj = new org.json.JSONObject(safeJson);
+            double scale = obj.optDouble("scale", 1.0);
+            if (scale <= 0.2) scale = 1.0;
+
+            final int newWidth = Math.round(dpToPx(160) * (float) scale);
+            final int newHeight = Math.round(dpToPx(180) * (float) scale);
+
+            if (params != null && windowManager != null && isViewAttached && floatingLayout != null) {
+                params.width = newWidth;
+                params.height = newHeight;
+                windowManager.updateViewLayout(floatingLayout, params);
+            }
+        } catch (Throwable t) {}
+
+        if (webView != null) {
+            webView.post(new Runnable() {
                 @Override
                 public void run() {
-                    if (activeInstance != null && activeInstance.webView != null) {
-                        activeInstance.webView.evaluateJavascript(
+                    if (webView != null) {
+                        webView.evaluateJavascript(
                                 "window.applySyncedPetData && window.applySyncedPetData(" + safeJson + ");", null
                         );
                     }
@@ -214,7 +235,7 @@ public class FloatingPetService extends Service {
                         android.content.SharedPreferences prefs = getSharedPreferences("MyPetPrefs", MODE_PRIVATE);
                         String savedJson = prefs.getString("pet_data_json", null);
                         if (savedJson != null && !savedJson.isEmpty()) {
-                            view.evaluateJavascript("window.applySyncedPetData && window.applySyncedPetData(" + savedJson + ");", null);
+                            applyScaleAndData(savedJson);
                         }
                     } catch (Throwable t) {}
                 }
