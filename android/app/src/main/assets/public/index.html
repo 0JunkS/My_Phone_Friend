@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>내 폰 안의 친구 - MY PHONE FRIEND</title>
+  <meta name="description" content="화면을 자유롭게 돌아다니며 AI 음성 대화와 3일 기억 시스템을 제공하는 내 손안의 펫 친구 앱" />
+  
+  <!-- Modern Google Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script type="module" crossorigin src="/assets/index-CiWSlGBX.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CslnTqKb.css">
+</head>
+<body>
+  <!-- Ambient background glow orbs -->
+  <div class="ambient-glow">
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+    <div class="glow-orb glow-orb-3"></div>
+  </div>
+
+  <div id="app">
+    <!-- ====================================================================
+         VIEW 1: HOME DASHBOARD
+         ==================================================================== -->
+    <main id="home-view" class="view-section">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="brand-title">
+          <span class="brand-icon">🍌</span>
+          <div>
+            <h1 class="brand-name">내 폰 안의 친구</h1>
+          </div>
+        </div>
+        <div class="status-badge" id="app-status-badge">
+          <span class="status-dot"></span>
+          <span>펫 활성화됨</span>
+        </div>
+      </header>
+
+      <!-- Main Pet Showcase Stage -->
+      <section class="glass-card cat-ears-card pet-showcase-card">
+        <div class="pet-showcase-info">
+          <h2 id="current-pet-name">나노바나나</h2>
+          <p id="current-pet-status">자주 쓰다듬어주고 말을 걸어주면 행복해해요! 🍌✨</p>
+          <div style="margin-top: 6px; font-size: 0.78rem; color: var(--neon-amber); font-weight: 600;">
+            💡 <strong>트리플 탭:</strong> 캐릭터를 3번 빠르게 톡톡톡 누르면 마이크가 켜져요!
+          </div>
+        </div>
+
+        <div class="pet-stage" id="home-pet-stage">
+          <!-- Character instance is rendered here -->
+        </div>
+
+        <!-- Floating Background PIP Button -->
+        <button id="btn-toggle-pip" class="cat-ear-btn secondary" style="width: 100%; margin-top: 8px; font-size: 0.88rem; padding: 10px 16px;">
+          <span>📺 다른 앱 위에도 띄우기 (PIP 플로팅)</span>
+        </button>
+      </section>
+
+      <!-- Primary Go-to-Screen Action Button -->
+      <button id="btn-enter-companion" class="cat-ear-btn primary" style="width: 100%; padding: 16px; font-size: 1.1rem;">
+        <span>🐾 화면으로 나가기 (배회 모드)</span>
+      </button>
+
+      <!-- Action Grid -->
+      <section class="action-grid">
+        <button id="btn-open-talk" class="glass-card cat-ear-btn action-card-btn">
+          <span class="action-icon">🎙️</span>
+          <span class="action-label">AI 말하기</span>
+          <span class="action-desc">3회 터치 시 즉시 열림</span>
+        </button>
+
+        <button id="btn-open-closet" class="glass-card cat-ear-btn action-card-btn">
+          <span class="action-icon">👗</span>
+          <span class="action-label">옷장 & 커스텀</span>
+          <span class="action-desc">캐릭터/액세서리/사진</span>
+        </button>
+
+        <button id="btn-open-memory" class="glass-card cat-ear-btn action-card-btn">
+          <span class="action-icon">📦</span>
+          <span class="action-label">3일 기억함</span>
+          <span class="action-desc">필요한 것 & 일정 메모</span>
+        </button>
+
+        <button id="btn-open-settings" class="glass-card cat-ear-btn action-card-btn">
+          <span class="action-icon">⚙️</span>
+          <span class="action-label">앱 설정</span>
+          <span class="action-desc">사운드 & AI 키 설정</span>
+        </button>
+      </section>
+
+      <!-- 3-Day Memory Quick Banner -->
+      <section id="banner-memory-quick" class="glass-card memory-preview-card">
+        <div class="memory-preview-left">
+          <span style="font-size: 1.5rem;">📝</span>
+          <div>
+            <div style="font-size: 0.9rem; font-weight: 700;">기억하고 있는 항목</div>
+            <div id="memory-quick-text" style="font-size: 0.75rem; color: var(--text-secondary);">"나중에 ~ 필요해"라고 말해보세요!</div>
+          </div>
+        </div>
+        <div class="memory-count-badge" id="memory-quick-count">0개</div>
+      </section>
+    </main>
+
+    <!-- ====================================================================
+         VIEW 2: COMPANION ROAM MODE (Clean Screen Background)
+         ==================================================================== -->
+    <div id="companion-view" class="view-section hidden">
+      <div class="companion-backdrop"></div>
+
+      <!-- Quick Floating Return to Home Button -->
+      <button id="btn-companion-back-home" class="cat-ear-btn floating-home-pill">
+        <span>🏠 홈으로</span>
+      </button>
+    </div>
+
+    <!-- Persistent Global Character Layer (Always Interactive & Touchable in all views) -->
+    <div id="global-character-layer"></div>
+
+    <!-- ====================================================================
+         LONG-PRESS RADIAL / FLOATING GLASS ACTION MENU
+         ==================================================================== -->
+    <div id="radial-menu" class="radial-action-menu">
+      <div class="radial-glass-plate cat-ears-card">
+        <div class="radial-menu-title">✨ 펫 액션 메뉴 ✨</div>
+        <div class="radial-menu-items">
+          <button id="radial-btn-talk" class="radial-item-btn">
+            <span>🎙️</span> <span>AI 말하기</span>
+          </button>
+          <button id="radial-btn-change" class="radial-item-btn">
+            <span>🔄</span> <span>캐릭터 바꾸기</span>
+          </button>
+          <button id="radial-btn-custom" class="radial-item-btn">
+            <span>👗</span> <span>커스터마이징</span>
+          </button>
+          <button id="radial-btn-memory" class="radial-item-btn">
+            <span>📦</span> <span>3일 기억함</span>
+          </button>
+          <button id="radial-btn-home" class="radial-item-btn">
+            <span>🏠</span> <span>홈 화면으로</span>
+          </button>
+          <button id="radial-btn-close" class="radial-item-btn" style="color: var(--neon-pink);">
+            <span>❌</span> <span>닫기</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 1: AI VOICE & CHAT MODAL (With Integrated 3-Day Memory)
+         ==================================================================== -->
+    <div id="modal-chat" class="modal-overlay">
+      <div class="glass-card cat-ears-card modal-box">
+        <div class="modal-header">
+          <h3><span>🎙️</span> AI 음성 대화</h3>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="chat-header-btn-memory" class="cat-ear-btn" style="padding: 6px 12px; font-size: 0.78rem;">
+              <span>📦 3일 기억함</span>
+            </button>
+            <button class="modal-close-btn" data-close="modal-chat">&times;</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <!-- Voice Soundwave Visualizer -->
+          <div class="chat-wave-container" id="chat-wave">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+
+          <!-- Chat messages log -->
+          <div class="chat-history" id="chat-history">
+            <div class="chat-msg bot">
+              안녕! 나노바나나예요! 🍌✨<br>
+              마이크 버튼을 누르고 말하거나 글을 적어보세요.<br>
+              💡 팁: "나중에 우산 챙겨야 해"라고 말하면 3일간 기억하고, "아까 내가 뭐 필요하다고 했었지?"라고 물어보시면 즉시 답변해드려요!
+            </div>
+          </div>
+
+          <!-- Controls: Mic button + text input -->
+          <div style="display: flex; justify-content: center; margin-top: 4px;">
+            <button id="btn-mic-toggle" class="cat-ear-btn primary" style="border-radius: var(--radius-pill); padding: 12px 24px;">
+              <span id="mic-icon">🎙️</span> <span id="mic-status-label">말하기 시작</span>
+            </button>
+          </div>
+
+          <div class="chat-input-row">
+            <input type="text" id="chat-text-input" class="glass-input" placeholder="메시지를 입력하거나 말해보세요..." />
+            <button id="btn-send-chat" class="cat-ear-btn" style="padding: 10px 16px;">
+              <span>전송</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 2: 3-DAY MEMORY BOX MODAL
+         ==================================================================== -->
+    <div id="modal-memory" class="modal-overlay">
+      <div class="glass-card cat-ears-card modal-box">
+        <div class="modal-header">
+          <h3><span>📦</span> 3일 기억함</h3>
+          <button class="modal-close-btn" data-close="modal-memory">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="font-size: 0.8rem; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: var(--radius-sm);">
+            💡 <strong>3일 보관 규칙:</strong> 스마트폰에 안전하게 저장되며, 정확히 3일(72시간)이 지나면 자동으로 삭제됩니다.
+          </div>
+
+          <!-- Add custom memory input -->
+          <div class="chat-input-row">
+            <input type="text" id="memory-add-input" class="glass-input" placeholder="새로 기억할 항목 입력 (예: 충전기 챙기기)" />
+            <button id="btn-add-memory" class="cat-ear-btn primary" style="padding: 10px 16px;">
+              <span>기억</span>
+            </button>
+          </div>
+
+          <div class="section-subtitle">현재 기억 중인 목록</div>
+          <div class="memory-list" id="memory-list-container">
+            <!-- Memory cards dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 3: CLOSET & CHARACTER CUSTOMIZER MODAL
+         ==================================================================== -->
+    <div id="modal-closet" class="modal-overlay">
+      <div class="glass-card cat-ears-card modal-box">
+        <div class="modal-header">
+          <h3><span>👗</span> 캐릭터 & 옷장</h3>
+          <button class="modal-close-btn" data-close="modal-closet">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="section-subtitle">기본 캐릭터 선택</div>
+          <div class="character-picker-grid">
+            <div class="picker-item active" data-type="nano_banana">
+              <span class="picker-icon">🍌</span>
+              <span class="picker-name">나노바나나</span>
+            </div>
+            <div class="picker-item" data-type="berry_cat">
+              <span class="picker-icon">🐱</span>
+              <span class="picker-name">딸기냥이</span>
+            </div>
+            <div class="picker-item" data-type="cloud_puppy">
+              <span class="picker-icon">🐶</span>
+              <span class="picker-name">구름댕이</span>
+            </div>
+            <div class="picker-item" data-type="choco_dino">
+              <span class="picker-icon">🦖</span>
+              <span class="picker-name">초코공룡</span>
+            </div>
+          </div>
+
+          <div class="section-subtitle">내 사진으로 캐릭터 만들기</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <input type="file" id="photo-upload-input" accept="image/*" style="display: none;" />
+            <button id="btn-upload-photo" class="cat-ear-btn secondary" style="width: 100%;">
+              <span>📷 사진 업로드 (자체 검열 필터 작동)</span>
+            </button>
+            <button id="btn-remove-photo" class="cat-ear-btn" style="width: 100%; display: none; font-size: 0.8rem;">
+              <span>🗑️ 커스텀 사진 제거</span>
+            </button>
+          </div>
+
+          <div class="section-subtitle">액세서리 꾸미기</div>
+          <div class="accessory-picker-grid">
+            <div class="picker-item active" data-accessory="none">
+              <span class="picker-icon">❌</span>
+              <span class="picker-name">없음</span>
+            </div>
+            <div class="picker-item" data-accessory="party_hat">
+              <span class="picker-icon">🎉</span>
+              <span class="picker-name">파티모자</span>
+            </div>
+            <div class="picker-item" data-accessory="cat_ears">
+              <span class="picker-icon">🐱</span>
+              <span class="picker-name">고양이귀</span>
+            </div>
+            <div class="picker-item" data-accessory="sunglasses">
+              <span class="picker-icon">🕶️</span>
+              <span class="picker-name">선글라스</span>
+            </div>
+            <div class="picker-item" data-accessory="ribbon">
+              <span class="picker-icon">🎀</span>
+              <span class="picker-name">리본</span>
+            </div>
+            <div class="picker-item" data-accessory="angel_wings">
+              <span class="picker-icon">🪽</span>
+              <span class="picker-name">천사날개</span>
+            </div>
+          </div>
+
+          <div class="section-subtitle">캐릭터 색상 조절</div>
+          <div class="color-slider-wrapper">
+            <span>🎨</span>
+            <input type="range" id="color-hue-slider" class="color-slider" min="0" max="360" value="0" />
+            <span id="hue-value-label">0°</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 4: SETTINGS MODAL
+         ==================================================================== -->
+    <div id="modal-settings" class="modal-overlay">
+      <div class="glass-card cat-ears-card modal-box">
+        <div class="modal-header">
+          <h3><span>⚙️</span> 앱 설정</h3>
+          <button class="modal-close-btn" data-close="modal-settings">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 700; font-size: 0.95rem;">효과음 사운드</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">터치 및 모션 사운드 효과</div>
+            </div>
+            <button id="btn-toggle-sound" class="cat-ear-btn primary" style="padding: 8px 16px;">
+              <span id="sound-status-text">🔊 켜짐</span>
+            </button>
+          </div>
+
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;">Gemini API Key (선택 사항)</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px;">
+              키를 입력하면 나노바나나가 Gemini 인공지능으로 더욱 스마트하게 대화합니다! (미입력 시에도 내장 AI로 작동)
+            </div>
+            <div class="chat-input-row">
+              <input type="password" id="gemini-key-input" class="glass-input" placeholder="AIzaSy..." />
+              <button id="btn-save-gemini-key" class="cat-ear-btn" style="padding: 8px 16px;">저장</button>
+            </div>
+          </div>
+
+          <div class="section-subtitle">화면 위 상시 플로팅 팁</div>
+          <div class="build-guide-card">
+            <p><strong>Always-on-Top 데스크톱 펫:</strong></p>
+            <p>상단의 <code>[전체 화면 상시 띄우기]</code> 버튼을 누르면 브라우저를 닫거나 다른 프로그램을 띄워도 화면 최상단에 작은 펫이 항상 떠서 함께합니다!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 5: SAFETY ALERT MODAL (Image Censorship Warning)
+         ==================================================================== -->
+    <div id="modal-safety-alert" class="modal-overlay">
+      <div class="glass-card cat-ears-card modal-box" style="border-color: var(--neon-pink);">
+        <div class="modal-header">
+          <h3 style="color: #fca5a5;"><span>⚠️</span> 이미지 검열 알림</h3>
+          <button class="modal-close-btn" data-close="modal-safety-alert">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="safety-warning-banner">
+            <span style="font-size: 1.6rem;">🚫</span>
+            <div id="safety-alert-message">
+              건전하지 않거나 유해한 이미지는 업로드할 수 없습니다.
+            </div>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+            내 폰 안의 친구는 모두를 위한 안심 환경을 위해 성인물, 잔혹/혐오 이미지를 자체 검열 필터로 차단하고 있습니다. 건전하고 귀여운 사진을 다시 선택해주세요! 🍌💛
+          </p>
+          <button class="cat-ear-btn primary" data-close="modal-safety-alert" style="width: 100%;">
+            <span>확인</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden PIP Canvas & Video for Floating Screen Pet Stream -->
+  <canvas id="pip-canvas" width="220" height="240" style="display: none;"></canvas>
+  <video id="pip-video" autoplay muted playsinline style="display: none;"></video>
+
+</body>
+</html>

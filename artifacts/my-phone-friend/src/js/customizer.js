@@ -47,6 +47,7 @@ export class CustomizerEngine {
         customPhotoUrl: this.customPhotoUrl
       };
       localStorage.setItem(CUSTOM_PREF_KEY, JSON.stringify(pref));
+      window.dispatchEvent(new Event('characterUpdated'));
     } catch (e) {
       console.warn('Failed to save customizer preferences:', e);
     }

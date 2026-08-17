@@ -132,18 +132,22 @@ public class FloatingPetService extends Service {
                 layoutType = WindowManager.LayoutParams.TYPE_PHONE;
             }
 
-            // Compact floating window directly sized around character + speech bubble (no full-screen touch blocking)
+            // Compact floating window directly sized around character + speech bubble
+            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+            int screenWidth = metrics.widthPixels;
+            int screenHeight = metrics.heightPixels;
+
             params = new WindowManager.LayoutParams(
-                    dpToPx(140),
                     dpToPx(160),
+                    dpToPx(180),
                     layoutType,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                     PixelFormat.TRANSLUCENT
             );
 
             params.gravity = Gravity.TOP | Gravity.START;
-            params.x = dpToPx(60);
-            params.y = dpToPx(180);
+            params.x = Math.max(0, Math.min(dpToPx(60), screenWidth - params.width));
+            params.y = Math.max(0, Math.min(dpToPx(180), screenHeight - params.height));
 
             floatingLayout = new FrameLayout(this);
             floatingLayout.setBackgroundColor(Color.TRANSPARENT);
@@ -161,9 +165,17 @@ public class FloatingPetService extends Service {
 
             webView.setBackgroundColor(Color.TRANSPARENT);
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            webView.setWebViewClient(new WebViewClient());
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    super.onReceivedError(view, errorCode, description, failingUrl);
+                    if (failingUrl != null && failingUrl.startsWith("file:///android_asset/")) {
+                        view.loadUrl("https://localhost/index.html?mode=overlay");
+                    }
+                }
+            });
 
-            // Load local android asset bundle offline
+            // Load local android asset bundle offline with overlay query mode
             webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
 
             floatingLayout.addView(webView, new FrameLayout.LayoutParams(
@@ -171,7 +183,7 @@ public class FloatingPetService extends Service {
                     FrameLayout.LayoutParams.MATCH_PARENT
             ));
 
-            // Native Touch & Drag listener to move the floating pet window anywhere on screen
+            // Native Touch & Drag listener with strict screen wall boundary clamping
             floatingLayout.setOnTouchListener(new View.OnTouchListener() {
                 private int initialX, initialY;
                 private float initialTouchX, initialTouchY;
@@ -191,8 +203,17 @@ public class FloatingPetService extends Service {
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
-                            params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                            params.y = initialY + (int) (event.getRawY() - initialTouchY);
+                            int rawX = initialX + (int) (event.getRawX() - initialTouchX);
+                            int rawY = initialY + (int) (event.getRawY() - initialTouchY);
+
+                            android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
+                            int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
+                            int maxAllowedY = Math.max(0, currentMetrics.heightPixels - params.height);
+
+                            // Clamp position so character and speech bubble never cross screen edges ("벽넘어로 가면 안됨")
+                            params.x = Math.max(0, Math.min(rawX, maxAllowedX));
+                            params.y = Math.max(0, Math.min(rawY, maxAllowedY));
+
                             try {
                                 if (isViewAttached && floatingLayout != null) {
                                     windowManager.updateViewLayout(floatingLayout, params);
@@ -239,10 +260,15 @@ public class FloatingPetService extends Service {
             public void run() {
                 try {
                     if (isViewAttached && floatingLayout != null && params != null && windowManager != null) {
-                        int deltaX = (int) ((Math.random() - 0.5) * 30);
-                        int deltaY = (int) ((Math.random() - 0.5) * 20);
-                        params.x = Math.max(10, Math.min(params.x + deltaX, 800));
-                        params.y = Math.max(50, Math.min(params.y + deltaY, 1500));
+                        android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
+                        int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
+                        int maxAllowedY = Math.max(0, currentMetrics.heightPixels - params.height);
+
+                        int deltaX = (int) ((Math.random() - 0.5) * 40);
+                        int deltaY = (int) ((Math.random() - 0.5) * 30);
+
+                        params.x = Math.max(0, Math.min(params.x + deltaX, maxAllowedX));
+                        params.y = Math.max(0, Math.min(params.y + deltaY, maxAllowedY));
                         windowManager.updateViewLayout(floatingLayout, params);
                     }
                 } catch (Throwable t) {}

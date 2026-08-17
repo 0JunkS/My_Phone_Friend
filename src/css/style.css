@@ -463,8 +463,10 @@ body.mode-overlay > *:not(#global-character-layer) {
   pointer-events: none !important;
 }
 
+body.mode-overlay #app,
 body.mode-overlay #home-view,
 body.mode-overlay #companion-view,
+body.mode-overlay .ambient-glow,
 body.mode-overlay .ambient-background,
 body.mode-overlay .glow-orb,
 body.mode-overlay .modal,
@@ -496,9 +498,9 @@ body.mode-overlay .character-container {
   position: relative !important;
   top: auto !important;
   left: auto !important;
-  transform: scale(0.92) !important;
+  transform: scale(0.95) !important;
   margin: auto !important;
-  pointer-events: none !important;
+  pointer-events: auto !important;
 }
 
 /* ==========================================================================

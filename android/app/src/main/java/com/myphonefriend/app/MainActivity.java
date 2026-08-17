@@ -124,11 +124,6 @@ public class MainActivity extends BridgeActivity {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
                 startFloatingPetService();
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
-                Rational aspectRatio = new Rational(1, 1);
-                pipBuilder.setAspectRatio(aspectRatio);
-                enterPictureInPictureMode(pipBuilder.build());
             }
         } catch (Throwable t) {
             t.printStackTrace();

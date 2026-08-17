@@ -43,6 +43,21 @@ class App {
     this.customizer = new CustomizerEngine(this.character);
     this.floatingPet = new FloatingPetEngine(this);
 
+    // Real-time character customization sync across app & overlay background service
+    const syncCharacterPref = () => {
+      if (this.customizer) {
+        this.customizer.loadPreferences();
+      }
+    };
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'my_phone_friend_custom_pref_v1') syncCharacterPref();
+    });
+    window.addEventListener('characterUpdated', syncCharacterPref);
+
+    if (document.body.classList.contains('mode-overlay')) {
+      this.character.say('헤헤 밖에서도 함께해요! 🍌✨', 3500);
+    }
+
     // 3. Bind UI & Events
     this.bindNavigation();
     this.bindRadialMenu();
