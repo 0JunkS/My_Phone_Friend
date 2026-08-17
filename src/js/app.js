@@ -99,11 +99,25 @@ class App {
       minY: 40,
       onTap: () => {
         this.character.petCare(10);
-        this.character.say('반가워요!', 3000);
+        this.character.say('반가워요! 🍌✨', 2500);
       }
     });
 
-    this.character.say('곁에 있을게요!', 7000);
+    // 1. Initialize Customizer in Overlay Mode to load and apply exact pet type, accessory, hue, scale, photo
+    this.customizer = new CustomizerEngine(this.character);
+
+    // 2. Real-time character customization sync across main app & overlay service
+    const syncCharacterPref = () => {
+      if (this.customizer) {
+        this.customizer.loadPreferences();
+      }
+    };
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'my_phone_friend_custom_pref_v1') syncCharacterPref();
+    });
+    window.addEventListener('characterUpdated', syncCharacterPref);
+
+    this.character.say('곁에 있을게요! 🍌✨', 7000);
   }
 
   /* ========================================================================
@@ -497,6 +511,21 @@ class App {
       hueValueLabel.textContent = `${val}°`;
       this.customizer.setHue(val);
     });
+
+    const scaleSlider = document.getElementById('pet-scale-slider');
+    const scaleValueLabel = document.getElementById('scale-value-label');
+
+    if (scaleSlider) {
+      if (this.customizer && this.customizer.currentScale) {
+        scaleSlider.value = this.customizer.currentScale;
+        if (scaleValueLabel) scaleValueLabel.textContent = `${Math.round(this.customizer.currentScale * 100)}%`;
+      }
+      scaleSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) || 1.0;
+        if (scaleValueLabel) scaleValueLabel.textContent = `${Math.round(val * 100)}%`;
+        this.customizer.setScale(val);
+      });
+    }
 
     btnUploadPhoto.addEventListener('click', () => {
       photoUploadInput.click();

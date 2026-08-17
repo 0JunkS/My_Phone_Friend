@@ -18,6 +18,8 @@ export class CustomizerEngine {
     this.currentHue = 0;
     this.customPhotoUrl = null;
 
+    this.currentScale = 1.0;
+
     this.loadPreferences();
   }
 
@@ -29,6 +31,7 @@ export class CustomizerEngine {
         this.currentType = pref.type || CHARACTER_TYPES.NANO_BANANA;
         this.currentAccessory = pref.accessory || 'none';
         this.currentHue = pref.hueShift || 0;
+        this.currentScale = pref.scale || 1.0;
         this.customPhotoUrl = pref.customPhotoUrl || null;
 
         this.applyCustomization();
@@ -44,6 +47,7 @@ export class CustomizerEngine {
         type: this.currentType,
         accessory: this.currentAccessory,
         hueShift: this.currentHue,
+        scale: this.currentScale,
         customPhotoUrl: this.customPhotoUrl
       };
       localStorage.setItem(CUSTOM_PREF_KEY, JSON.stringify(pref));
@@ -58,6 +62,7 @@ export class CustomizerEngine {
       type: this.currentType,
       accessory: this.currentAccessory,
       hueShift: this.currentHue,
+      scale: this.currentScale,
       customPhotoUrl: this.customPhotoUrl
     });
   }
@@ -80,6 +85,12 @@ export class CustomizerEngine {
 
   setHue(hueValue) {
     this.currentHue = parseInt(hueValue, 10) || 0;
+    this.applyCustomization();
+    this.savePreferences();
+  }
+
+  setScale(scaleValue) {
+    this.currentScale = parseFloat(scaleValue) || 1.0;
     this.applyCustomization();
     this.savePreferences();
   }

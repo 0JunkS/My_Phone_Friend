@@ -21,8 +21,15 @@ class App {
   }
 
   init() {
-    if (window.location.search.includes('mode=overlay') || window.isOverlayMode) {
+    this.isOverlayMode =
+      window.location.search.includes('mode=overlay') ||
+      window.location.hash.includes('android-overlay') ||
+      window.isOverlayMode;
+
+    if (this.isOverlayMode) {
       document.body.classList.add('mode-overlay');
+      this.initOverlayMode();
+      return;
     }
 
     // 1. Initialize Character in global-character-layer for clean overlay isolation
@@ -74,6 +81,42 @@ class App {
       this.updateMemoryPreview();
       this.renderMemoryList();
     }, 15000);
+  }
+
+  initOverlayMode() {
+    let container = document.getElementById('global-character-layer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'global-character-layer';
+      document.body.appendChild(container);
+    }
+
+    this.character = new CharacterController(container, {
+      type: CHARACTER_TYPES.NANO_BANANA,
+      startX: 25,
+      startY: 44,
+      minY: 40,
+      onTap: () => {
+        this.character.petCare(10);
+        this.character.say('반가워요! 🍌✨', 2500);
+      }
+    });
+
+    // 1. Initialize Customizer in Overlay Mode to load and apply exact pet type, accessory, hue, scale, photo
+    this.customizer = new CustomizerEngine(this.character);
+
+    // 2. Real-time character customization sync across main app & overlay service
+    const syncCharacterPref = () => {
+      if (this.customizer) {
+        this.customizer.loadPreferences();
+      }
+    };
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'my_phone_friend_custom_pref_v1') syncCharacterPref();
+    });
+    window.addEventListener('characterUpdated', syncCharacterPref);
+
+    this.character.say('곁에 있을게요! 🍌✨', 7000);
   }
 
   /* ========================================================================
@@ -467,6 +510,21 @@ class App {
       hueValueLabel.textContent = `${val}°`;
       this.customizer.setHue(val);
     });
+
+    const scaleSlider = document.getElementById('pet-scale-slider');
+    const scaleValueLabel = document.getElementById('scale-value-label');
+
+    if (scaleSlider) {
+      if (this.customizer && this.customizer.currentScale) {
+        scaleSlider.value = this.customizer.currentScale;
+        if (scaleValueLabel) scaleValueLabel.textContent = `${Math.round(this.customizer.currentScale * 100)}%`;
+      }
+      scaleSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) || 1.0;
+        if (scaleValueLabel) scaleValueLabel.textContent = `${Math.round(val * 100)}%`;
+        this.customizer.setScale(val);
+      });
+    }
 
     btnUploadPhoto.addEventListener('click', () => {
       photoUploadInput.click();

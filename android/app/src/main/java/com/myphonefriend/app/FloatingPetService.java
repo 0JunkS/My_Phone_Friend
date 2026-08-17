@@ -236,9 +236,9 @@ public class FloatingPetService extends Service {
 
                             android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
                             int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
-                            int maxAllowedY = Math.max(0, currentMetrics.heightPixels - params.height);
+                            int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
 
-                            // Clamp position so character and speech bubble never cross screen edges ("벽넘어로 가면 안됨")
+                            // Clamp position so character and speech bubble never cross screen edges or soft keyboard
                             params.x = Math.max(0, Math.min(rawX, maxAllowedX));
                             params.y = Math.max(0, Math.min(rawY, maxAllowedY));
 
@@ -268,6 +268,21 @@ public class FloatingPetService extends Service {
                 }
             });
 
+            // Prevent pet from overlapping or being covered when soft keyboard pops up
+            floatingLayout.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    if (params == null || windowManager == null || !isViewAttached) return;
+                    try {
+                        int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
+                        if (params.y > maxAllowedY) {
+                            params.y = maxAllowedY;
+                            windowManager.updateViewLayout(floatingLayout, params);
+                        }
+                    } catch (Throwable t) {}
+                }
+            });
+
             windowManager.addView(floatingLayout, params);
             isViewAttached = true;
             startAutonomousWander();
@@ -276,6 +291,17 @@ public class FloatingPetService extends Service {
             t.printStackTrace();
             isViewAttached = false;
         }
+    }
+
+    private int getAvailableScreenHeight() {
+        try {
+            if (floatingLayout != null) {
+                android.graphics.Rect r = new android.graphics.Rect();
+                floatingLayout.getWindowVisibleDisplayFrame(r);
+                if (r.bottom > 0) return r.bottom;
+            }
+        } catch (Throwable t) {}
+        return getResources().getDisplayMetrics().heightPixels;
     }
 
     private void startAutonomousWander() {
@@ -290,7 +316,7 @@ public class FloatingPetService extends Service {
                     if (isViewAttached && floatingLayout != null && params != null && windowManager != null) {
                         android.util.DisplayMetrics currentMetrics = getResources().getDisplayMetrics();
                         int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
-                        int maxAllowedY = Math.max(0, currentMetrics.heightPixels - params.height);
+                        int maxAllowedY = Math.max(0, getAvailableScreenHeight() - params.height);
 
                         if (!isTouching) {
                             params.x += Math.round(wanderVelocityX);

@@ -36,6 +36,7 @@ export class CharacterController {
     this.customPhotoUrl = options.customPhotoUrl || null;
     this.accessory = options.accessory || 'none';
     this.hueShift = options.hueShift || 0;
+    this.scale = options.scale || 1.0;
 
     // Affection & Care Engine
     this.affection = 70; // 0 to 100
@@ -626,8 +627,9 @@ export class CharacterController {
     try {
       const ownerDoc = this.container.ownerDocument || document;
       const ownerWin = ownerDoc.defaultView || window;
-      const width = this.container.clientWidth || ownerWin.innerWidth || 300;
-      const height = this.container.clientHeight || ownerWin.innerHeight || 400;
+      const vv = ownerWin.visualViewport;
+      const width = vv ? vv.width : (this.container.clientWidth || ownerWin.innerWidth || 300);
+      const height = vv ? vv.height : (this.container.clientHeight || ownerWin.innerHeight || 400);
       return { width, height };
     } catch (e) {
       return { width: window.innerWidth, height: window.innerHeight };
@@ -700,27 +702,29 @@ export class CharacterController {
    * Keeps speech bubble upright without being mirrored!
    */
   updateTransform() {
+    const scaleFactor = this.scale || 1.0;
     if (document.body.classList.contains('mode-overlay')) {
       this.el.style.left = '15px';
       this.el.style.top = '25px';
-      const facingScale = this.facingRight ? 1 : -1;
+      const facingScale = this.facingRight ? scaleFactor : -scaleFactor;
       this.bodyWrapper.style.setProperty('--char-facing', facingScale);
-      this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
+      this.bodyWrapper.style.transform = `scaleX(${facingScale}) scaleY(${scaleFactor})`;
       return;
     }
 
     this.el.style.left = `${this.x}px`;
     this.el.style.top = `${this.y}px`;
-    const facingScale = this.facingRight ? 1 : -1;
+    const facingScale = this.facingRight ? scaleFactor : -scaleFactor;
     this.bodyWrapper.style.setProperty('--char-facing', facingScale);
-    this.bodyWrapper.style.transform = `scaleX(${facingScale})`;
+    this.bodyWrapper.style.transform = `scaleX(${facingScale}) scaleY(${scaleFactor})`;
   }
 
-  updateCustomization({ type, customPhotoUrl, accessory, hueShift }) {
+  updateCustomization({ type, customPhotoUrl, accessory, hueShift, scale }) {
     if (type !== undefined) this.type = type;
     if (customPhotoUrl !== undefined) this.customPhotoUrl = customPhotoUrl;
     if (accessory !== undefined) this.accessory = accessory;
     if (hueShift !== undefined) this.hueShift = hueShift;
+    if (scale !== undefined) this.scale = scale;
     this.renderVisuals();
   }
 }
