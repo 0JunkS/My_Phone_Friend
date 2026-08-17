@@ -34,6 +34,19 @@ public class FloatingPetService extends Service {
     private static final String CHANNEL_ID = "FloatingPetChannel";
     private static final int NOTIFICATION_ID = 1001;
 
+    // The overlay window is intentionally smaller than the full screen for
+    // rendering/perf reasons (see .agents/memory/android-background.md), but
+    // it is a REAL OS window boundary, not a CSS box: anything the character
+    // draws outside it (the speech bubble above, the drop-shadow filter used
+    // in the "lifted"/dragged state below) is hard-clipped by the window
+    // edge, no matter what overflow rules the page sets. 160x180dp only left
+    // 34dp above the character and ~26dp below it, both smaller than the
+    // bubble/shadow actually need, so both were getting cut off. These must
+    // stay in sync with character.js's default localRenderOffset, which
+    // centers the character inside this box.
+    private static final int OVERLAY_BASE_WIDTH_DP = 260;
+    private static final int OVERLAY_BASE_HEIGHT_DP = 280;
+
     public static void updatePetDataInOverlay(final String petJsonData) {
         if (activeInstance != null) {
             activeInstance.applyScaleAndData(petJsonData);
@@ -47,8 +60,8 @@ public class FloatingPetService extends Service {
             double scale = obj.optDouble("scale", 1.0);
             if (scale <= 0.2) scale = 1.0;
 
-            final int newWidth = Math.round(dpToPx(160) * (float) scale);
-            final int newHeight = Math.round(dpToPx(180) * (float) scale);
+            final int newWidth = Math.round(dpToPx(OVERLAY_BASE_WIDTH_DP) * (float) scale);
+            final int newHeight = Math.round(dpToPx(OVERLAY_BASE_HEIGHT_DP) * (float) scale);
 
             if (params != null && windowManager != null && isViewAttached && floatingLayout != null) {
                 params.width = newWidth;
@@ -177,14 +190,17 @@ public class FloatingPetService extends Service {
                 layoutType = WindowManager.LayoutParams.TYPE_PHONE;
             }
 
-            // Compact floating window directly sized around character + speech bubble
+            // Compact floating window sized around the character, PLUS margin
+            // for the speech bubble above it and the lifted-state shadow
+            // below/around it (see OVERLAY_BASE_*_DP comment above) so they
+            // aren't clipped by this window's own edges.
             android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
             int screenWidth = metrics.widthPixels;
             int screenHeight = metrics.heightPixels;
 
             params = new WindowManager.LayoutParams(
-                    dpToPx(160),
-                    dpToPx(180),
+                    dpToPx(OVERLAY_BASE_WIDTH_DP),
+                    dpToPx(OVERLAY_BASE_HEIGHT_DP),
                     layoutType,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                     PixelFormat.TRANSLUCENT

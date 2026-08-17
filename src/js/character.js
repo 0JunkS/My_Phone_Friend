@@ -100,7 +100,16 @@ export class CharacterController {
     this.windowFollow = !!options.windowFollow;
     this.viewportOverride = options.viewportOverride || null; // {width, height}
     this.onPositionChange = options.onPositionChange || null;
-    this.localRenderOffset = options.localRenderOffset || { x: 8, y: 34 }; // room for speech bubble
+    // Offset of the character inside the small native Android overlay
+    // window, at scale 1.0. Must stay in sync with FloatingPetService's
+    // OVERLAY_BASE_WIDTH_DP/HEIGHT_DP (260x280dp): x centers the 110px-wide
+    // character horizontally ((260-110)/2), and y=90 leaves room above for
+    // the speech bubble (which was clipped at the old y=34) while the
+    // remaining ~70px below the character covers the "lifted" state's
+    // drop-shadow filter (which was clipped at the old window height).
+    // Scaled by the pet's size setting in updateTransform() below so the
+    // margins stay proportional at every scale, not just 1.0.
+    this.localRenderOffset = options.localRenderOffset || { x: 75, y: 90 };
 
     // DOM Structure
     this.el = document.createElement('div');
@@ -497,8 +506,9 @@ export class CharacterController {
       sweat: ['💦', '❕', '❗']
     };
     const list = emojis[type] || ['✨'];
-    const originX = this.windowFollow ? this.localRenderOffset.x : this.x;
-    const originY = this.windowFollow ? this.localRenderOffset.y : this.y;
+    const particleScale = Math.max(0.5, this.scale || 1.0);
+    const originX = this.windowFollow ? this.localRenderOffset.x * particleScale : this.x;
+    const originY = this.windowFollow ? this.localRenderOffset.y * particleScale : this.y;
 
     for (let i = 0; i < count; i++) {
       const p = document.createElement('div');
@@ -829,9 +839,13 @@ export class CharacterController {
     if (this.windowFollow) {
       // The DOM element stays put at a fixed local offset inside the
       // small native overlay window; the *window itself* is moved to
-      // this.x/this.y by the caller via onPositionChange below.
-      this.el.style.left = `${this.localRenderOffset.x}px`;
-      this.el.style.top = `${this.localRenderOffset.y}px`;
+      // this.x/this.y by the caller via onPositionChange below. The native
+      // window grows by the same scaleFactor (see
+      // FloatingPetService.applyScaleAndData), so the offset must scale
+      // with it too, or the character drifts off-center and the bubble/
+      // shadow margins shrink again at non-default pet sizes.
+      this.el.style.left = `${this.localRenderOffset.x * scaleFactor}px`;
+      this.el.style.top = `${this.localRenderOffset.y * scaleFactor}px`;
     } else {
       this.el.style.left = `${this.x || 0}px`;
       this.el.style.top = `${this.y || 0}px`;
