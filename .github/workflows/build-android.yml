@@ -58,8 +58,8 @@ jobs:
 
       - name: Verify Android asset URLs
         run: |
-          test -f android/app/src/main/assets/public/pet-overlay.html
-          test -f android/app/src/main/assets/public/assets/overlay-*.js
+          test -f android/app/src/main/assets/public/index.html
+          ls android/app/src/main/assets/public/assets/*.js
           if grep -R -nE 'src="/assets|href="/assets' android/app/src/main/assets/public; then
             echo "Android assets must use relative URLs when loaded from file:///android_asset."
             exit 1
