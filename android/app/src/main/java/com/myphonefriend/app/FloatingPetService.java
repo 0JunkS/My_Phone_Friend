@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
@@ -31,6 +32,9 @@ public class FloatingPetService extends Service {
     private boolean isViewAttached = false;
     private Handler wanderHandler;
     private Runnable wanderRunnable;
+    private boolean isTouching = false;
+    private float wanderVelocityX = 2.0f;
+    private float wanderVelocityY = 1.35f;
 
     private static final String CHANNEL_ID = "FloatingPetChannel";
     private static final int NOTIFICATION_ID = 1001;
@@ -90,7 +94,15 @@ public class FloatingPetService extends Service {
                     .setOngoing(true)
                     .build();
 
-            startForeground(NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                );
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
         } catch (Throwable t) {
             t.printStackTrace();
         }
@@ -185,14 +197,13 @@ public class FloatingPetService extends Service {
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     super.onReceivedError(view, errorCode, description, failingUrl);
-                    if (failingUrl != null && failingUrl.startsWith("file:///android_asset/")) {
-                        view.loadUrl("https://localhost/index.html?mode=overlay");
-                    }
+                    view.loadUrl("file:///android_asset/pet-overlay.html");
                 }
             });
 
-            // Load local android asset bundle offline with overlay query mode
-            webView.loadUrl("file:///android_asset/public/index.html?mode=overlay");
+            // Load only the dedicated pet overlay. Never load the full app UI
+            // into the background window.
+            webView.loadUrl("file:///android_asset/pet-overlay.html");
 
             floatingLayout.addView(webView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -200,7 +211,7 @@ public class FloatingPetService extends Service {
             ));
 
             // Native Touch & Drag listener with strict screen wall boundary clamping
-            floatingLayout.setOnTouchListener(new View.OnTouchListener() {
+            webView.setOnTouchListener(new View.OnTouchListener() {
                 private int initialX, initialY;
                 private float initialTouchX, initialTouchY;
                 private long touchStartTime;
@@ -211,6 +222,7 @@ public class FloatingPetService extends Service {
 
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
+                            isTouching = true;
                             touchStartTime = System.currentTimeMillis();
                             initialX = params.x;
                             initialY = params.y;
@@ -243,16 +255,16 @@ public class FloatingPetService extends Service {
                             float diffY = Math.abs(event.getRawY() - initialTouchY);
 
                             if (duration < 350 && diffX < 15 && diffY < 15) {
-                                // Tap pet -> Open main app
-                                try {
-                                    Intent launchIntent = new Intent(FloatingPetService.this, MainActivity.class);
-                                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                                    startActivity(launchIntent);
-                                } catch (Throwable t) {}
+                                webView.evaluateJavascript(
+                                        "window.petTouched && window.petTouched();",
+                                        null
+                                );
                             }
+                            isTouching = false;
                             return true;
                     }
-                    return false;
+                        isTouching = false;
+                        return false;
                 }
             });
 
@@ -280,20 +292,27 @@ public class FloatingPetService extends Service {
                         int maxAllowedX = Math.max(0, currentMetrics.widthPixels - params.width);
                         int maxAllowedY = Math.max(0, currentMetrics.heightPixels - params.height);
 
-                        int deltaX = (int) ((Math.random() - 0.5) * 80);
-                        int deltaY = (int) ((Math.random() - 0.5) * 60);
-
-                        params.x = Math.max(0, Math.min(params.x + deltaX, maxAllowedX));
-                        params.y = Math.max(0, Math.min(params.y + deltaY, maxAllowedY));
+                        if (!isTouching) {
+                            params.x += Math.round(wanderVelocityX);
+                            params.y += Math.round(wanderVelocityY);
+                            if (params.x <= 0 || params.x >= maxAllowedX) {
+                                wanderVelocityX = -wanderVelocityX;
+                                params.x = Math.max(0, Math.min(params.x, maxAllowedX));
+                            }
+                            if (params.y <= 0 || params.y >= maxAllowedY) {
+                                wanderVelocityY = -wanderVelocityY;
+                                params.y = Math.max(0, Math.min(params.y, maxAllowedY));
+                            }
+                        }
                         windowManager.updateViewLayout(floatingLayout, params);
                     }
                 } catch (Throwable t) {}
                 if (wanderHandler != null && isViewAttached) {
-                    wanderHandler.postDelayed(this, 2500);
+                    wanderHandler.postDelayed(this, 32);
                 }
             }
         };
-        wanderHandler.postDelayed(wanderRunnable, 2500);
+        wanderHandler.post(wanderRunnable);
     }
 
     private int dpToPx(int dp) {

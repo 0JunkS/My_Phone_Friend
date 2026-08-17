@@ -8,7 +8,7 @@
   
   <script>
     (function() {
-      if (location.search.indexOf('mode=overlay') !== -1 || location.href.indexOf('mode=overlay') !== -1 || window.isOverlayMode) {
+      if (location.search.indexOf('mode=overlay') !== -1 || location.hash.indexOf('android-overlay') !== -1 || location.href.indexOf('mode=overlay') !== -1 || window.isOverlayMode) {
         document.documentElement.classList.add('mode-overlay');
       }
     })();

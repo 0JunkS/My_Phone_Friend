@@ -16,13 +16,21 @@ class App {
     this.aiChat = null;
     this.customizer = null;
     this.floatingPet = null;
+    this.isOverlayMode = false;
 
     this.init();
   }
 
   init() {
-    if (window.location.search.includes('mode=overlay') || window.isOverlayMode) {
+    this.isOverlayMode =
+      window.location.search.includes('mode=overlay') ||
+      window.location.hash.includes('android-overlay') ||
+      window.isOverlayMode;
+
+    if (this.isOverlayMode) {
       document.body.classList.add('mode-overlay');
+      this.initOverlayMode();
+      return;
     }
 
     // 1. Initialize Character in global-character-layer for clean overlay isolation
@@ -74,6 +82,28 @@ class App {
       this.updateMemoryPreview();
       this.renderMemoryList();
     }, 15000);
+  }
+
+  initOverlayMode() {
+    let container = document.getElementById('global-character-layer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'global-character-layer';
+      document.body.appendChild(container);
+    }
+
+    this.character = new CharacterController(container, {
+      type: CHARACTER_TYPES.NANO_BANANA,
+      startX: 25,
+      startY: 44,
+      minY: 40,
+      onTap: () => {
+        this.character.petCare(10);
+        this.character.say('반가워요!', 3000);
+      }
+    });
+
+    this.character.say('곁에 있을게요!', 7000);
   }
 
   /* ========================================================================

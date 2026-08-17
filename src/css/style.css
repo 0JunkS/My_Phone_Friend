@@ -513,9 +513,7 @@ body.mode-overlay #global-character-layer {
   height: 100vh;
   background: transparent !important;
   pointer-events: none;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display: block !important;
   z-index: 999999;
   overflow: hidden !important;
   touch-action: none !important;
@@ -523,11 +521,11 @@ body.mode-overlay #global-character-layer {
 
 html.mode-overlay .character-container,
 body.mode-overlay .character-container {
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  transform: scale(0.95) !important;
-  margin: auto !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+  margin: 0 !important;
   pointer-events: auto !important;
   touch-action: none !important;
   display: block !important;
