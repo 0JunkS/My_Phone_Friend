@@ -597,20 +597,32 @@ class App {
       }
     });
 
-    // Limbs toggle click
+    // Limbs toggle: directly bind the click on the visible switch instead of
+    // only relying on native <label> → hidden checkbox forwarding, since some
+    // Android WebView builds don't reliably forward clicks to a
+    // display:none input even when wrapped in its <label>. This guarantees
+    // the toggle works everywhere (desktop browser, in-app WebView, overlay).
     if (limbsCheckbox) {
+      const toggleLimbs = () => {
+        limbsCheckbox.checked = !limbsCheckbox.checked;
+        updateLimbsToggleUI(limbsCheckbox.checked);
+        this.customizer.setShowLimbs(limbsCheckbox.checked);
+      };
+
+      const limbsToggleLabel = limbsCheckbox.closest('.toggle-switch');
+      if (limbsToggleLabel) {
+        limbsToggleLabel.addEventListener('click', (e) => {
+          e.preventDefault();
+          toggleLimbs();
+        });
+      }
+
+      // Still listen for 'change' in case the label forwarding does fire
+      // natively (e.g. keyboard/space-bar toggling) so state stays in sync
+      // without double-toggling.
       limbsCheckbox.addEventListener('change', () => {
         updateLimbsToggleUI(limbsCheckbox.checked);
         this.customizer.setShowLimbs(limbsCheckbox.checked);
-      });
-    }
-    // Clicking the track/thumb also toggles
-    if (limbsTrack) {
-      limbsTrack.addEventListener('click', () => {
-        if (limbsCheckbox) {
-          limbsCheckbox.checked = !limbsCheckbox.checked;
-          limbsCheckbox.dispatchEvent(new Event('change'));
-        }
       });
     }
 
