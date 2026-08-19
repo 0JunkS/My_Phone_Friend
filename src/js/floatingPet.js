@@ -6,6 +6,7 @@
 
 import { sound } from './audio.js';
 import { CharacterController, CHARACTER_TYPES, CHARACTER_STATES } from './character.js';
+import { registerBedLayer, unregisterBedLayer } from './bedSelector.js';
 
 export class FloatingPetEngine {
   constructor(mainApp) {
@@ -106,7 +107,10 @@ export class FloatingPetEngine {
           }
         });
 
+        registerBedLayer(pipContainer, () => pipChar);
+
         this.pipWindow.addEventListener('pagehide', () => {
+          unregisterBedLayer(pipContainer);
           this.isFloating = false;
           this.pipWindow = null;
           this.updateUiState(false);

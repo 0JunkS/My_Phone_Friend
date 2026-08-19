@@ -23,7 +23,8 @@ export const CHARACTER_STATES = {
   WALK: 'walk',
   LIFTED: 'lifted',
   SAD: 'sad',
-  HAPPY: 'happy'
+  HAPPY: 'happy',
+  SLEEP: 'sleep'
 };
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -121,6 +122,13 @@ export class CharacterController {
     this.speechBubble.textContent = '';
     this.el.appendChild(this.speechBubble);
 
+    // Floating "Zzz" indicator shown only while state === SLEEP (see
+    // character.css [data-state="sleep"] .character-zzz-bubble)
+    this.zzzBubble = document.createElement('div');
+    this.zzzBubble.className = 'character-zzz-bubble';
+    this.zzzBubble.textContent = '💤';
+    this.el.appendChild(this.zzzBubble);
+
     this.longPressRing = document.createElement('div');
     this.longPressRing.className = 'long-press-ring';
     this.el.appendChild(this.longPressRing);
@@ -174,6 +182,10 @@ export class CharacterController {
       eyeLeft = `<path d="M38 46 Q43 38 48 46" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`;
       eyeRight = `<path d="M62 46 Q67 38 72 46" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`;
       mouth = `<path d="M46 58 Q55 72 64 58 Z" fill="#ef4444" stroke="#1e293b" stroke-width="1.5" /><circle cx="55" cy="64" r="2.5" fill="#fca5a5" />`;
+    } else if (this.state === CHARACTER_STATES.SLEEP) {
+      eyeLeft = `<path d="M37 47 Q43 51 49 47" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`;
+      eyeRight = `<path d="M61 47 Q67 51 73 47" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`;
+      mouth = `<ellipse cx="55" cy="61" rx="3" ry="2.2" fill="#1e293b" opacity="0.55" />`;
     } else {
       eyeLeft = `<ellipse cx="43" cy="46" rx="4" ry="5.5" fill="#1e293b" /><circle cx="45" cy="44" r="2" fill="#fff" />`;
       eyeRight = `<ellipse cx="67" cy="46" rx="4" ry="5.5" fill="#1e293b" /><circle cx="69" cy="44" r="2" fill="#fff" />`;
@@ -244,8 +256,13 @@ export class CharacterController {
   }
 
   renderBerryCatSvg(accessorySvg) {
-    let mouth = this.state === CHARACTER_STATES.SAD ? `M48 64 Q55 60 62 64` :
+    const sleeping = this.state === CHARACTER_STATES.SLEEP;
+    let mouth = sleeping ? `M50 61 Q55 64 60 61` :
+                this.state === CHARACTER_STATES.SAD ? `M48 64 Q55 60 62 64` :
                 this.state === CHARACTER_STATES.HAPPY ? `M46 58 Q55 70 64 58 Z` : `M50 60 Q55 65 60 60`;
+    const eyes = sleeping
+      ? `<path d="M38 52 Q43 56 48 52" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M62 52 Q67 56 72 52" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`
+      : `<circle cx="43" cy="52" r="4.5" fill="#1e293b" /><circle cx="45" cy="50" r="1.5" fill="#fff" /><circle cx="67" cy="52" r="4.5" fill="#1e293b" /><circle cx="69" cy="50" r="1.5" fill="#fff" />`;
     return `
       <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,0.18)" />
@@ -260,8 +277,7 @@ export class CharacterController {
         <line x1="20" y1="64" x2="35" y2="62" stroke="#be123c" stroke-width="2" stroke-linecap="round" />
         <line x1="90" y1="56" x2="75" y2="58" stroke="#be123c" stroke-width="2" stroke-linecap="round" />
         <line x1="90" y1="64" x2="75" y2="62" stroke="#be123c" stroke-width="2" stroke-linecap="round" />
-        <circle cx="43" cy="52" r="4.5" fill="#1e293b" /><circle cx="45" cy="50" r="1.5" fill="#fff" />
-        <circle cx="67" cy="52" r="4.5" fill="#1e293b" /><circle cx="69" cy="50" r="1.5" fill="#fff" />
+        ${eyes}
         <polygon points="53,57 57,57 55,60" fill="#be123c" />
         <path d="${mouth}" stroke="#be123c" stroke-width="2" fill="${this.state === CHARACTER_STATES.HAPPY ? '#ef4444' : 'none'}" />
         <g class="nano-arm-left" style="transform-origin: 24px 68px;"><circle cx="20" cy="68" r="6" fill="#f43f5e" /></g>
@@ -272,6 +288,11 @@ export class CharacterController {
   }
 
   renderCloudPuppySvg(accessorySvg) {
+    const sleeping = this.state === CHARACTER_STATES.SLEEP;
+    const eyes = sleeping
+      ? `<path d="M38 52 Q43 56 48 52" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M62 52 Q67 56 72 52" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`
+      : `<circle cx="43" cy="52" r="4.5" fill="#1e293b" /><circle cx="67" cy="52" r="4.5" fill="#1e293b" />`;
+    const mouth = sleeping ? `M50 63 Q55 65 60 63` : `M50 63 Q55 70 60 63`;
     return `
       <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,0.18)" />
@@ -281,10 +302,9 @@ export class CharacterController {
         <ellipse cx="86" cy="42" rx="10" ry="18" fill="#3b82f6" transform="rotate(15 86 42)" />
         <path d="M 55 26 C 70 26, 85 36, 88 52 C 96 56, 98 70, 90 78 C 88 92, 70 98, 55 96 C 40 98, 22 92, 20 78 C 12 70, 14 56, 22 52 C 25 36, 40 26, 55 26 Z" 
               fill="#93c5fd" stroke="#2563eb" stroke-width="2.5" />
-        <circle cx="43" cy="52" r="4.5" fill="#1e293b" />
-        <circle cx="67" cy="52" r="4.5" fill="#1e293b" />
+        ${eyes}
         <ellipse cx="55" cy="58" rx="5" ry="4" fill="#1e293b" />
-        <path d="M50 63 Q55 70 60 63" stroke="#1e293b" stroke-width="2" fill="none" />
+        <path d="${mouth}" stroke="#1e293b" stroke-width="2" fill="none" />
         <g class="nano-arm-left" style="transform-origin: 22px 70px;"><circle cx="18" cy="70" r="6" fill="#3b82f6" /></g>
         <g class="nano-arm-right" style="transform-origin: 88px 70px;"><circle cx="92" cy="70" r="6" fill="#3b82f6" /></g>
         ${accessorySvg}
@@ -293,6 +313,11 @@ export class CharacterController {
   }
 
   renderChocoDinoSvg(accessorySvg) {
+    const sleeping = this.state === CHARACTER_STATES.SLEEP;
+    const eyes = sleeping
+      ? `<path d="M38 50 Q43 54 48 50" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M62 50 Q67 54 72 50" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />`
+      : `<circle cx="43" cy="50" r="4.5" fill="#1e293b" /><circle cx="67" cy="50" r="4.5" fill="#1e293b" />`;
+    const mouth = sleeping ? `M49 62 Q55 64 61 62` : `M47 62 Q55 70 63 62`;
     return `
       <svg viewBox="0 0 110 120" width="100%" height="100%" style="display:block;overflow:visible;filter: hue-rotate(${this.hueShift}deg);">
         <ellipse cx="55" cy="112" rx="26" ry="5" fill="rgba(0,0,0,0.18)" />
@@ -302,9 +327,8 @@ export class CharacterController {
         <polygon points="70,22 80,14 82,28" fill="#f59e0b" />
         <polygon points="38,22 28,14 26,28" fill="#f59e0b" />
         <circle cx="55" cy="60" r="36" fill="#34d399" stroke="#059669" stroke-width="2.5" />
-        <circle cx="43" cy="50" r="4.5" fill="#1e293b" />
-        <circle cx="67" cy="50" r="4.5" fill="#1e293b" />
-        <path d="M47 62 Q55 70 63 62" stroke="#1e293b" stroke-width="2" fill="none" />
+        ${eyes}
+        <path d="${mouth}" stroke="#1e293b" stroke-width="2" fill="none" />
         <g class="nano-arm-left" style="transform-origin: 24px 66px;"><circle cx="18" cy="66" r="6" fill="#059669" /></g>
         <g class="nano-arm-right" style="transform-origin: 86px 66px;"><circle cx="92" cy="66" r="6" fill="#059669" /></g>
         ${accessorySvg}
@@ -329,7 +353,7 @@ export class CharacterController {
         <g class="nano-leg-left" style="transform-origin: 40px 96px;"><ellipse cx="40" cy="102" rx="7" ry="7" fill="#64748b" /></g>
         <g class="nano-leg-right" style="transform-origin: 70px 96px;"><ellipse cx="70" cy="102" rx="7" ry="7" fill="#64748b" /></g>` : ''}
         
-        <g filter="url(#photoShadow)">
+        <g filter="url(#photoShadow)" opacity="${this.state === CHARACTER_STATES.SLEEP ? 0.85 : 1}">
           <image href="${this.customPhotoUrl}" x="17" y="17" width="76" height="76" clip-path="url(#customPhotoClip)" preserveAspectRatio="xMidYMid slice" />
         </g>
 
@@ -424,7 +448,7 @@ export class CharacterController {
     const remark = idleRemarks[Math.floor(Math.random() * idleRemarks.length)];
     this.say(remark, 4000);
 
-    if (this.affection < 35 && this.state !== CHARACTER_STATES.LIFTED) {
+    if (this.affection < 35 && this.state !== CHARACTER_STATES.LIFTED && this.state !== CHARACTER_STATES.SLEEP) {
       this.setState(CHARACTER_STATES.SAD, 5000);
     }
   }
@@ -432,8 +456,34 @@ export class CharacterController {
   petCare(boost = 15) {
     this.lastCareTime = Date.now();
     this.affection = Math.min(100, this.affection + boost);
-    if (this.state !== CHARACTER_STATES.LIFTED) {
+    if (this.state !== CHARACTER_STATES.LIFTED && this.state !== CHARACTER_STATES.SLEEP) {
       this.setState(CHARACTER_STATES.HAPPY, 2500);
+    }
+  }
+
+  /**
+   * Called by bedSelector.js whenever it detects the pet overlapping /
+   * leaving the placed bed cushion. `anchor`, if given, is a {x, y}
+   * point (same coordinate space as this.x/this.y) to snap the
+   * character onto so it visually looks seated inside the cushion
+   * instead of just happening to overlap it mid-wander.
+   */
+  setSleeping(sleeping, anchor = null) {
+    if (sleeping) {
+      if (this.state === CHARACTER_STATES.SLEEP) return;
+      this._preSleepState = this.state === CHARACTER_STATES.LIFTED ? CHARACTER_STATES.WALK : this.state;
+      this.vx = 0;
+      this.vy = 0;
+      if (anchor) {
+        this.x = anchor.x;
+        this.y = anchor.y;
+      }
+      this.setState(CHARACTER_STATES.SLEEP);
+      this.updateTransform();
+    } else {
+      if (this.state !== CHARACTER_STATES.SLEEP) return;
+      const defaultState = this.affection < 35 ? CHARACTER_STATES.SAD : CHARACTER_STATES.WALK;
+      this.setState(this._preSleepState || defaultState);
     }
   }
 
@@ -794,7 +844,7 @@ export class CharacterController {
       const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
       lastTime = currentTime;
 
-      if (!this.isDragging) {
+      if (!this.isDragging && this.state !== CHARACTER_STATES.SLEEP) {
         wanderTimer += dt;
         if (wanderTimer > 2.2) {
           wanderTimer = 0;

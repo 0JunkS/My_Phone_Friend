@@ -37,13 +37,4 @@
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.25));
 }
 
-/* 펫이 방석 위에서 잠들었을 때의 시각 효과 (character.js가 별도 모션을
-   갖고 있지 않은 경우를 위한 최소한의 폴백) */
-.pet-sleeping-visual {
-  animation: pet-sleep-breathe 2.4s ease-in-out infinite;
-}
 
-@keyframes pet-sleep-breathe {
-  0%, 100% { transform: scale(1) translateY(0); }
-  50% { transform: scale(1.015) translateY(2px); }
-}

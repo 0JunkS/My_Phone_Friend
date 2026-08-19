@@ -1,35 +1,29 @@
 /**
  * bedSelector.js
  * -------------------------------------------------------------
- * 방석(펫 침대) 선택 + 배경 구석 배치 + 펫 수면 감지 모듈
+ * 방석(펫 침대) 선택 + 배치 + 펫 수면 감지/모션 모듈
  *
- * 통합 방법 (app.js 상단에 추가):
+ * 사용법 (app.js 상단에 추가):
  *   import { initBedSelector } from './bedSelector.js';
  *   initBedSelector();
  *
- * index.html 에는 아래 두 줄만 추가하면 됩니다 (</head> 직전, app.js 보다 위):
- *   <link rel="stylesheet" href="./src/css/bedSelector.css" />
- *
- * 그리고 #modal-closet 의 .modal-body 안, "액세서리 꾸미기" 섹션 다음쯤에
- * 아래 마크업을 붙여주세요 (없어도 initBedSelector가 동적으로 만들어 붙여줍니다.
- * 직접 넣고 싶다면 id="bed-picker-grid" 인 빈 div 하나만 있으면 됩니다):
- *
- *   <div class="section-subtitle">🛏️ 잠자리(방석) 선택</div>
- *   <div class="bed-picker-grid" id="bed-picker-grid"></div>
+ * 다른 레이어(예: 화면 위 플로팅/PiP 창)에도 방석을 띄우고 싶다면:
+ *   import { registerBedLayer, unregisterBedLayer } from './bedSelector.js';
+ *   registerBedLayer(layerEl, () => myCharacterControllerInstance);
+ *   ... (창이 닫힐 때) unregisterBedLayer(layerEl);
  */
 
 const STORAGE_KEY = 'mpf_selected_bed';
 
-// 3개의 방석 프리셋. src 경로는 프로젝트에 넣은 실제 이미지 경로로 맞춰주세요.
-// (이번 답변과 함께 assets/beds/ 안에 3개 파일을 같이 전달했습니다)
 const BED_PRESETS = [
   { id: 'bed-orange', name: '오렌지 방석', src: './assets/beds/bed-orange.png' },
   { id: 'bed-gray', name: '그레이 방석', src: './assets/beds/bed-gray.webp' },
   { id: 'bed-red', name: '레드 방석', src: './assets/beds/bed-red.png' },
 ];
 
-let sleepCheckInterval = null;
-let isPetSleeping = false;
+// 방석이 배치된 모든 레이어(메인 앱의 global-character-layer, 플로팅 PiP 창 등)를
+// 추적한다. 각 항목: { layerEl, bedEl, getController, intervalId, sleeping }
+const mountedLayers = [];
 
 function loadSelectedBedId() {
   try {
@@ -52,7 +46,6 @@ function renderBedPicker() {
   let grid = document.getElementById('bed-picker-grid');
 
   if (!grid) {
-    // 자동 삽입: 옷장 모달 body 마지막 부분에 섹션을 붙인다
     const closetBody = document.querySelector('#modal-closet .modal-body');
     if (!closetBody) return; // 옷장 모달 자체가 없으면 포기
 
@@ -86,50 +79,24 @@ function renderBedPicker() {
 function selectBed(bedId) {
   saveSelectedBedId(bedId);
   renderBedPicker();
-  placeBedInCorner(bedId);
+  mountedLayers.forEach(applyBedToLayer);
 }
 
-/** 배회 화면(companion-view) 구석에 선택된 방석을 배치 */
-function placeBedInCorner(bedId) {
+/** 저장된(또는 방금 고른) 방석 이미지를 특정 레이어의 <img>에 반영 */
+function applyBedToLayer(entry) {
+  const bedId = loadSelectedBedId();
   const bed = BED_PRESETS.find((b) => b.id === bedId);
-  const companionView = document.getElementById('companion-view');
-  if (!bed || !companionView) return;
-
-  let bedEl = document.getElementById('pet-bed-corner');
-  if (!bedEl) {
-    bedEl = document.createElement('img');
-    bedEl.id = 'pet-bed-corner';
-    bedEl.className = 'pet-bed-corner';
-    // backdrop 바로 다음, 캐릭터 레이어보다 아래에 오도록 맨 앞쪽에 삽입
-    companionView.insertBefore(bedEl, companionView.firstChild.nextSibling || null);
+  if (!bed) {
+    entry.bedEl.style.display = 'none';
+    return;
   }
-  bedEl.src = bed.src;
-  bedEl.alt = bed.name;
-  bedEl.style.display = 'block';
-
-  startSleepWatcher();
-}
-
-/** 저장된 선택값으로 초기 배치 (앱 로드 시 호출) */
-function restoreBedFromStorage() {
-  const savedId = loadSelectedBedId();
-  if (savedId) placeBedInCorner(savedId);
-}
-
-/** 펫의 루트 엘리먼트를 최대한 유연하게 탐색 */
-function findPetElement() {
-  return (
-    document.querySelector('#global-character-layer [data-pet-root]') ||
-    document.querySelector('#global-character-layer .pet-character') ||
-    document.querySelector('#global-character-layer .pet-instance') ||
-    document.getElementById('global-character-layer')?.firstElementChild ||
-    null
-  );
+  entry.bedEl.src = bed.src;
+  entry.bedEl.alt = bed.name;
+  entry.bedEl.style.display = 'block';
 }
 
 /** 사각형 두 개가 겹치는지(펫이 방석 위에 있는지) 판정 */
 function rectsOverlap(a, b, marginRatio = 0.5) {
-  // marginRatio: 방석 영역을 살짝 넉넉하게 잡아 판정 (펫 발밑이 방석 중앙 근처면 인정)
   const ax = a.left - a.width * marginRatio * 0.2;
   const ay = a.top - a.height * marginRatio * 0.2;
   const aw = a.width * (1 + marginRatio * 0.2);
@@ -142,55 +109,90 @@ function rectsOverlap(a, b, marginRatio = 0.5) {
   );
 }
 
-function startSleepWatcher() {
-  if (sleepCheckInterval) return;
-  sleepCheckInterval = setInterval(() => {
-    const bedEl = document.getElementById('pet-bed-corner');
-    const petEl = findPetElement();
-    const companionView = document.getElementById('companion-view');
-    if (!bedEl || !petEl || !companionView || companionView.classList.contains('hidden')) {
-      setPetSleeping(false);
-      return;
+function checkSleepOverlap(entry) {
+  const controller = entry.getController && entry.getController();
+  if (!controller || !controller.el || !entry.bedEl.isConnected) {
+    if (entry.sleeping) {
+      entry.sleeping = false;
+      if (controller) controller.setSleeping(false);
     }
+    return;
+  }
 
-    const bedRect = bedEl.getBoundingClientRect();
-    const petRect = petEl.getBoundingClientRect();
-    const overlapping = rectsOverlap(bedRect, petRect);
+  // While the character is being dragged/lifted, don't fight the user's hand.
+  if (controller.isDragging) return;
 
-    setPetSleeping(overlapping);
-  }, 400);
+  const bedRect = entry.bedEl.getBoundingClientRect();
+  const petRect = controller.el.getBoundingClientRect();
+  const overlapping = bedRect.width > 0 && rectsOverlap(bedRect, petRect);
+
+  if (overlapping === entry.sleeping) return;
+  entry.sleeping = overlapping;
+
+  if (overlapping) {
+    // Snap the character onto the cushion so it looks properly seated/
+    // lying inside it instead of just happening to overlap it mid-wander.
+    // The cushion's "seat" (where a pet would actually rest) sits a bit
+    // below the visual center of the bed art (raised rim at the top).
+    const anchorX = bedRect.left + bedRect.width / 2 - controller.width / 2;
+    const anchorY = bedRect.top + bedRect.height * 0.62 - controller.height * 0.62;
+    controller.setSleeping(true, { x: anchorX, y: anchorY });
+  } else {
+    controller.setSleeping(false);
+  }
 }
 
-function setPetSleeping(shouldSleep) {
-  if (shouldSleep === isPetSleeping) return;
-  isPetSleeping = shouldSleep;
+/**
+ * Places (or re-places) the pet bed inside `layerEl` and starts watching
+ * for the given character controller resting on top of it. `getController`
+ * is a function so the caller can swap out the underlying controller later
+ * (e.g. customization changes) without having to re-register.
+ */
+export function registerBedLayer(layerEl, getController) {
+  if (!layerEl) return null;
 
-  const petEl = findPetElement();
-  if (petEl) {
-    petEl.classList.toggle('pet-sleeping-visual', shouldSleep);
+  let entry = mountedLayers.find((e) => e.layerEl === layerEl);
+  if (!entry) {
+    const doc = layerEl.ownerDocument || document;
+    const bedEl = doc.createElement('img');
+    bedEl.className = 'pet-bed-corner';
+    bedEl.alt = '';
+    bedEl.style.display = 'none';
+    // Insert as the very first child so it renders BEHIND the character
+    // element(s) already (or later) appended to this same layer.
+    layerEl.insertBefore(bedEl, layerEl.firstChild || null);
+
+    entry = { layerEl, bedEl, getController, sleeping: false, intervalId: null };
+    entry.intervalId = setInterval(() => checkSleepOverlap(entry), 400);
+    mountedLayers.push(entry);
+  } else {
+    entry.getController = getController;
   }
 
-  // 캐릭터 로직(character.js)이 있으면 커스텀 이벤트로 상태를 넘겨서
-  // 실제 "자는 모션"으로 전환하게 한다. character.js 쪽에서
-  // window.addEventListener('pet-sleep-state', e => { ... e.detail.sleeping ... })
-  // 로 받아서 처리해주면 됨.
-  window.dispatchEvent(
-    new CustomEvent('pet-sleep-state', { detail: { sleeping: shouldSleep } })
-  );
+  applyBedToLayer(entry);
+  return entry;
+}
 
-  // 전역 헬퍼가 있다면 우선 사용 (있으면 이쪽이 더 정확한 모션 전환을 해줄 가능성이 높음)
-  if (shouldSleep && typeof window.setPetEmotion === 'function') {
-    window.setPetEmotion('sleep');
-  } else if (!shouldSleep && typeof window.setPetEmotion === 'function') {
-    window.setPetEmotion('idle');
-  }
+/** 레이어(예: 플로팅 창)가 닫힐 때 호출해서 감시/DOM을 정리 */
+export function unregisterBedLayer(layerEl) {
+  const idx = mountedLayers.findIndex((e) => e.layerEl === layerEl);
+  if (idx === -1) return;
+  const [entry] = mountedLayers.splice(idx, 1);
+  if (entry.intervalId) clearInterval(entry.intervalId);
+  if (entry.bedEl && entry.bedEl.parentNode) entry.bedEl.parentNode.removeChild(entry.bedEl);
 }
 
 export function initBedSelector() {
   renderBedPicker();
-  restoreBedFromStorage();
 
-  // 옷장 모달이 열릴 때마다 최신 선택 상태로 다시 그려준다
+  // 메인 앱의 전역 캐릭터 레이어(#global-character-layer)에 방석을 배치.
+  // 오버레이/화면 위 배회 모드에서도 이 레이어는 계속 보이므로(캐릭터와
+  // 동일한 레이어) 방석도 함께 보인다.
+  const mainLayer = document.getElementById('global-character-layer');
+  if (mainLayer) {
+    registerBedLayer(mainLayer, () => window.appInstance && window.appInstance.character);
+  }
+
   const closetBtn = document.getElementById('btn-open-closet');
   if (closetBtn) {
     closetBtn.addEventListener('click', renderBedPicker);
