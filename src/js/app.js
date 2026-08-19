@@ -8,6 +8,7 @@ import { memoryEngine } from './memoryEngine.js';
 import { AiChatEngine } from './aiChat.js';
 import { CustomizerEngine } from './customizer.js';
 import { FloatingPetEngine } from './floatingPet.js';
+import { initBedSelector } from './bedSelector.js';
 
 window.applySyncedPetData = function(data) {
   if (!data) return;
@@ -761,4 +762,5 @@ class App {
 
 document.addEventListener('DOMContentLoaded', () => {
   window.appInstance = new App();
+  initBedSelector();
 });

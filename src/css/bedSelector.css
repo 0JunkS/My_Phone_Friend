@@ -1,0 +1,49 @@
+/* bedSelector.css — 방석 선택 UI + 구석 배치 스타일 */
+
+.bed-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.bed-picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  cursor: pointer;
+}
+
+.bed-picker-thumb {
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  object-fit: contain;
+  border-radius: var(--radius-sm, 12px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 배회 화면 구석에 고정되는 방석 */
+.pet-bed-corner {
+  position: absolute;
+  right: 4%;
+  bottom: 3%;
+  width: 34vw;
+  max-width: 220px;
+  min-width: 120px;
+  pointer-events: none;
+  z-index: 2; /* 배경 위, 캐릭터 레이어 아래 */
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.25));
+}
+
+/* 펫이 방석 위에서 잠들었을 때의 시각 효과 (character.js가 별도 모션을
+   갖고 있지 않은 경우를 위한 최소한의 폴백) */
+.pet-sleeping-visual {
+  animation: pet-sleep-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes pet-sleep-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.015) translateY(2px); }
+}
