@@ -764,5 +764,12 @@ class App {
 
 document.addEventListener('DOMContentLoaded', () => {
   window.appInstance = new App();
-  initBedSelector();
+  // 백그라운드 네이티브 오버레이는 캐릭터 크기에 맞춘 작은 창을 통째로
+  // 드래그하는 구조라서(FloatingPetService.createCompactOverlayPet),
+  // 그 안에 방석을 두면 창을 옮길 때 방석도 펫도 같이 끌려다녀서
+  // "화면 모서리에 고정된 방석"이 될 수 없다. 그래서 방석은 실제로
+  // 고정이 의미 있는 포그라운드 앱(전체 화면)에서만 등록한다.
+  if (!window.AndroidPetBridge) {
+    initBedSelector();
+  }
 });
