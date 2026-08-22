@@ -8,7 +8,7 @@ import { memoryEngine } from './memoryEngine.js';
 import { AiChatEngine } from './aiChat.js';
 import { CustomizerEngine } from './customizer.js';
 import { FloatingPetEngine } from './floatingPet.js';
-import { initBedSelector } from './bedSelector.js';
+import { initBedSelector, applySyncedBedId } from './bedSelector.js';
 
 window.applySyncedPetData = function(data) {
   if (!data) return;
@@ -27,6 +27,8 @@ window.applySyncedPetData = function(data) {
     window.appInstance.customizer.showLimbs = data.showLimbs !== false;
     window.appInstance.customizer.applyCustomization();
   }
+  // 방석 선택도 같은 네이티브 동기화 페이로드에 실려 오므로 함께 반영한다.
+  applySyncedBedId(data.bedId);
 };
 
 class App {

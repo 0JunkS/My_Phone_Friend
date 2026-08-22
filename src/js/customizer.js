@@ -7,6 +7,7 @@
 import { SafetyFilter } from './safetyFilter.js';
 import { CHARACTER_TYPES, CHARACTER_STATES } from './character.js';
 import { sound } from './audio.js';
+import { pushNativeSync } from './nativeSync.js';
 
 const CUSTOM_PREF_KEY = 'my_phone_friend_custom_pref_v1';
 
@@ -37,9 +38,7 @@ export class CustomizerEngine {
 
         this.applyCustomization();
 
-        if (window.AndroidPetBridge && window.AndroidPetBridge.syncPetData) {
-          window.AndroidPetBridge.syncPetData(saved);
-        }
+        pushNativeSync({ appearance: pref });
       }
     } catch (e) {
       console.warn('Failed to load customizer preferences:', e);
@@ -60,9 +59,7 @@ export class CustomizerEngine {
       localStorage.setItem(CUSTOM_PREF_KEY, jsonStr);
       window.dispatchEvent(new Event('characterUpdated'));
 
-      if (window.AndroidPetBridge && window.AndroidPetBridge.syncPetData) {
-        window.AndroidPetBridge.syncPetData(jsonStr);
-      }
+      pushNativeSync({ appearance: pref });
     } catch (e) {
       console.warn('Failed to save customizer preferences:', e);
     }

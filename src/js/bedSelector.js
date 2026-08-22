@@ -13,6 +13,8 @@
  *   ... (창이 닫힐 때) unregisterBedLayer(layerEl);
  */
 
+import { pushNativeSync } from './nativeSync.js';
+
 const STORAGE_KEY = 'mpf_selected_bed';
 
 const BED_PRESETS = [
@@ -77,6 +79,23 @@ function renderBedPicker() {
 }
 
 function selectBed(bedId) {
+  saveSelectedBedId(bedId);
+  renderBedPicker();
+  mountedLayers.forEach(applyBedToLayer);
+  // 포그라운드 앱 WebView와 백그라운드 오버레이 WebView는 localStorage를
+  // 공유하지 않으므로, 방석 선택도 외형 데이터와 같은 네이티브 통로로 푸시한다.
+  pushNativeSync({ bedId });
+}
+
+/**
+ * 네이티브(오버레이 웹뷰)가 window.applySyncedPetData(...)로 내려준 데이터에
+ * bedId가 포함되어 있을 때, 이 값을 로컬 선택 상태에 반영하고 이미 마운트된
+ * 모든 레이어(예: 오버레이의 global-character-layer)에 다시 그린다.
+ * 네이티브로 재푸시하지 않는다 — 이건 네이티브에서 "받은" 값을 반영하는
+ * 것이므로, 다시 보내면 불필요한 왕복이 생긴다.
+ */
+export function applySyncedBedId(bedId) {
+  if (bedId === undefined || bedId === null) return;
   saveSelectedBedId(bedId);
   renderBedPicker();
   mountedLayers.forEach(applyBedToLayer);
